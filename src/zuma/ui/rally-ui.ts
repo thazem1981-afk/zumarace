@@ -4,6 +4,17 @@ import type { Input } from '../engine/input'
 import type { Quality, SaveData, SaveStore } from '../engine/save'
 import { CAMPAIGN_CARS, CAMPAIGN_STAGES, MAX_UPGRADE_LEVEL, TURBO_TYPES, UPGRADE_BASE_COST, type CarId, type UpgradeKind, type RaceProgress, type TurboTypeId } from '../game/campaign'
 import type { RallyHud, RallyResult } from '../game/rally-game'
+import { CO_DRIVER, DRIVERS, driverById, type DriverId } from '../game/characters'
+import { LIVERIES, lookFor, PAINT_COLORS, RIM_COLORS, type CarLook, type LiveryId } from '../game/customization'
+import { conditionsForStage, TIME_LABEL, WEATHER_LABEL } from '../game/environment'
+import salemImg from '../../assets/driver-salem.jpg'
+import laylaImg from '../../assets/driver-layla.jpg'
+import karimImg from '../../assets/driver-karim.jpg'
+import mazenImg from '../../assets/codriver-mazen.jpg'
+
+const PORTRAITS: Record<DriverId, string> = { salem: salemImg, layla: laylaImg, karim: karimImg }
+const CAMERA_LABEL: Record<string, string> = { chase: 'مطاردة', far: 'مطاردة بعيدة', hood: 'غطاء المحرك', bumper: 'المصد', tv: 'تلفزيونية' }
+const WEATHER_ICON: Record<string, string> = { clear: '☀', cloudy: '☁', rain: '☔', fog: '≋', snow: '❄', sandstorm: '🌪' }
 
 export type RallyScreen = 'boot' | 'title' | 'campaign' | 'garage' | 'hud' | 'pause' | 'settings' | 'results'
 export type RallyUiActions = {
@@ -18,6 +29,9 @@ export type RallyUiActions = {
   selectTurbo(id: TurboTypeId): void
   upgrade(kind: UpgradeKind): void
   settings(patch: Partial<SaveData>): void
+  setDriver(id: DriverId): void
+  setLook(id: CarId, patch: Partial<CarLook>): void
+  cycleCamera(): void
 }
 
 /** Arabic, RTL HTML interface. Menus use the same focus/confirm path for keyboard and gamepad. */
@@ -84,6 +98,17 @@ export class RallyUi {
     this.root.querySelector('[data-slot="home-stage"]')!.textContent = number(progress.unlockedStage)
     this.root.querySelector('[data-slot="home-coins"]')!.textContent = number(progress.coins)
     this.root.querySelector('[data-slot="home-wins"]')!.textContent = number(progress.wins)
+    const stage = CAMPAIGN_STAGES[progress.unlockedStage - 1]
+    const c = conditionsForStage(stage.number)
+    const driver = driverById(this.save.data.driver)
+    const car = CAMPAIGN_CARS.find(item => item.id === progress.selectedCar) ?? CAMPAIGN_CARS[0]
+    const next = this.root.querySelector<HTMLElement>('[data-slot="home-next"]')!
+    next.innerHTML = `<small>المرحلة القادمة · ${number(stage.number)}</small><strong>${escapeHtml(stage.name)}</strong>
+      <div class="cond-chips"><span>${escapeHtml(c.biome.label)}</span><span>${WEATHER_ICON[c.weather]} ${escapeHtml(WEATHER_LABEL[c.weather])}</span><span>${escapeHtml(TIME_LABEL[c.time])}</span></div>`
+    const crew = this.root.querySelector<HTMLElement>('[data-slot="home-crew"]')!
+    crew.innerHTML = `<div class="crew-person"><img src="${PORTRAITS[driver.id]}" alt="" width="64" height="64"><div><small>السائق</small><b>${escapeHtml(driver.name)}</b><em>${escapeHtml(driver.perk)}</em></div></div>
+      <div class="crew-person"><img src="${mazenImg}" alt="" width="64" height="64"><div><small>${escapeHtml(CO_DRIVER.role)}</small><b>${escapeHtml(CO_DRIVER.name)}</b></div></div>
+      <div class="crew-car"><small>السيارة</small><b>${escapeHtml(car.name)}</b></div>`
     this.show('title')
   }
 
@@ -117,6 +142,8 @@ export class RallyUi {
     this.updateUpgrade('engine', progress)
     this.updateUpgrade('tires', progress)
     this.renderTurboTypes(progress)
+    this.renderDrivers()
+    this.renderLook(progress)
     this.show('garage')
   }
 
@@ -151,6 +178,19 @@ export class RallyUi {
       signal.classList.toggle('is-active', active)
       signal.setAttribute('aria-hidden', String(!active))
     }
+    const co = this.root.querySelector<HTMLElement>('.codriver')
+    if (co) {
+      co.classList.toggle('is-visible', !!hud.coDriver)
+      co.classList.toggle('is-urgent', hud.coDriverUrgent)
+      this.text('[data-slot="codriver-text"]', hud.coDriver)
+    }
+    this.text('[data-slot="hud-conditions"]', hud.conditions)
+    this.text('[data-slot="hud-camera"]', `🎥 ${CAMERA_LABEL[hud.camera] ?? ''}`)
+    const list = this.root.querySelector<HTMLElement>('.standings')
+    if (list) {
+      const html = hud.standings.map((r, i) => `<li class="${r.player ? 'is-player' : ''}"><b>${number(i + 1)}</b>${escapeHtml(r.name)}</li>`).join('')
+      if (list.dataset.html !== html) { list.innerHTML = html; list.dataset.html = html }
+    }
     const speed = this.root.querySelector<HTMLElement>('.speed-gauge')
     if (speed) speed.style.setProperty('--speed', `${Math.min(100, hud.speed / 1.5)}%`)
   }
@@ -177,7 +217,7 @@ export class RallyUi {
     this.setValue('[name="sfxVolume"]', d.sfxVolume)
     this.setValue('[name="sensitivity"]', d.sensitivity)
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('.toggle')) {
-      const key = button.dataset.setting as 'muted' | 'reducedMotion'
+      const key = button.dataset.setting as 'muted' | 'reducedMotion' | 'coDriverVoice'
       const on = d[key] === true
       button.setAttribute('aria-pressed', String(on))
       button.textContent = this.i18n.t(on ? 'settings.on' : 'settings.off')
@@ -236,6 +276,29 @@ export class RallyUi {
     button.disabled = level >= MAX_UPGRADE_LEVEL || progress.coins < cost
   }
 
+  private renderDrivers(): void {
+    const grid = this.root.querySelector<HTMLElement>('.driver-grid')
+    if (!grid) return
+    const current = this.save.data.driver
+    grid.innerHTML = DRIVERS.map(d => `<button data-nav class="driver-card${d.id === current ? ' is-selected' : ''}" data-action="driver" data-driver="${d.id}" style="--suit:${d.suit}">
+      <img src="${PORTRAITS[d.id]}" alt="" width="72" height="72" loading="lazy"><span><b>${escapeHtml(d.name)}</b><small>${escapeHtml(d.origin)}</small><em>${escapeHtml(d.perk)}</em></span></button>`).join('')
+  }
+
+  private renderLook(progress: RaceProgress): void {
+    const panel = this.root.querySelector<HTMLElement>('.look-panel')
+    if (!panel) return
+    const car = CAMPAIGN_CARS.find(item => item.id === progress.selectedCar) ?? CAMPAIGN_CARS[0]
+    const look = lookFor(this.save.data.garage, car.id)
+    const paint = look.paint ?? car.color
+    panel.innerHTML = `<h3>تخصيص المظهر · ${escapeHtml(car.name)}</h3>
+      <p class="shop-note">التخصيص مجاني ولا يغيّر أداء السيارة.</p>
+      <div class="look-row"><span>لون الطلاء</span><div class="swatches">${[car.color, ...PAINT_COLORS.filter(c => c !== car.color)].map(c => `<button data-nav class="swatch${c === paint ? ' is-on' : ''}" data-action="paint" data-value="${c}" style="--c:${c}" aria-label="لون ${c}"></button>`).join('')}</div></div>
+      <div class="look-row"><span>لون الجنوط</span><div class="swatches">${RIM_COLORS.map(c => `<button data-nav class="swatch${c === look.rim ? ' is-on' : ''}" data-action="rim" data-value="${c}" style="--c:${c}" aria-label="جنط ${c}"></button>`).join('')}</div></div>
+      <div class="look-row"><span>الملصقات</span><div class="chips">${LIVERIES.map(l => `<button data-nav class="chip${l.id === look.livery ? ' is-on' : ''}" data-action="livery" data-value="${l.id}">${escapeHtml(l.label)}</button>`).join('')}</div></div>
+      <div class="look-row"><span>الجناح الخلفي</span><div class="chips"><button data-nav class="chip${look.spoiler ? ' is-on' : ''}" data-action="spoiler" data-value="1">مركّب</button><button data-nav class="chip${!look.spoiler ? ' is-on' : ''}" data-action="spoiler" data-value="0">بدون</button></div></div>
+      <div class="look-row"><span>رقم السيارة</span><div class="chips"><button data-nav class="chip" data-action="number" data-value="-1" aria-label="أقل">−</button><b class="car-number">${number(look.number)}</b><button data-nav class="chip" data-action="number" data-value="1" aria-label="أكثر">+</button></div></div>`
+  }
+
   private renderTurboTypes(progress: RaceProgress): void {
     const grid = this.root.querySelector<HTMLElement>('.turbo-grid')
     if (!grid) return
@@ -267,7 +330,7 @@ export class RallyUi {
     this.audio.unlock()
     this.audio.play('ui')
     if (target.matches('.toggle')) {
-      const key = target.dataset.setting as 'muted' | 'reducedMotion'
+      const key = target.dataset.setting as 'muted' | 'reducedMotion' | 'coDriverVoice'
       this.actions.settings({ [key]: !this.save.data[key] })
       this.refreshSettings()
       return
@@ -303,6 +366,18 @@ export class RallyUi {
       case 'upgrade': {
         const kind = target.dataset.upgrade as UpgradeKind
         if (kind === 'engine' || kind === 'tires') { this.actions.upgrade(kind); this.showGarage() }
+        break
+      }
+      case 'driver': if (target.dataset.driver) { this.actions.setDriver(target.dataset.driver as DriverId); this.showGarage() } break
+      case 'camera': this.actions.cycleCamera(); break
+      case 'paint': case 'rim': case 'livery': case 'spoiler': case 'number': {
+        const id = this.save.data.raceProgress.selectedCar
+        const v = target.dataset.value ?? ''
+        const cur = lookFor(this.save.data.garage, id)
+        const patch: Partial<CarLook> = action === 'paint' ? { paint: v } : action === 'rim' ? { rim: v } : action === 'livery' ? { livery: v as LiveryId }
+          : action === 'spoiler' ? { spoiler: v === '1' } : { number: ((cur.number - 1 + Number(v) + 99) % 99) + 1 }
+        this.actions.setLook(id, patch)
+        this.showGarage()
         break
       }
       case 'retry-load': window.dispatchEvent(new CustomEvent('rally:retry-load')); break
@@ -364,8 +439,11 @@ export class RallyUi {
 </section>
 <section class="screen screen-title" data-screen="title">
   <header class="screen-top"><div class="wordmark"><img class="brand-emblem" src="/favicon.png" alt=""><div><strong data-i18n="game.title"></strong><small data-i18n="brand.type"></small></div></div><div class="wallet"><span aria-hidden="true">Z</span><b data-slot="home-coins">0</b><small data-i18n="money.coins"></small></div></header>
-  <div class="title-copy"><div class="title-ribbon"><i></i><span data-i18n="race.cup"></span><b>100</b></div><p class="eyebrow" data-i18n="brand.eyebrow"></p><h1 data-i18n="game.title"></h1><p class="tagline" data-i18n="game.tagline"></p><div class="campaign-summary"><span><span data-i18n="menu.stage"></span> <b data-slot="home-stage">1</b> / 100</span><span><span data-i18n="menu.wins"></span> <b data-slot="home-wins">0</b></span></div>
-    <nav class="menu"><button data-nav class="btn btn-primary" data-action="race"><span data-i18n="menu.race"></span><b>↙</b></button><button data-nav class="btn" data-action="campaign"><span data-i18n="menu.campaign"></span></button><button data-nav class="btn btn-accent" data-action="garage"><span data-i18n="menu.garage"></span></button><button data-nav class="btn btn-quiet" data-action="settings"><span data-i18n="menu.settings"></span></button></nav>
+  <div class="title-layout">
+    <div class="title-copy"><div class="title-ribbon"><i></i><span data-i18n="race.cup"></span><b>100</b></div><p class="eyebrow" data-i18n="brand.eyebrow"></p><h1 class="title-logo"><span>ZUMA</span><em>RALLY</em></h1><p class="tagline" data-i18n="game.tagline"></p><div class="campaign-summary"><span><span data-i18n="menu.stage"></span> <b data-slot="home-stage">1</b> / 100</span><span><span data-i18n="menu.wins"></span> <b data-slot="home-wins">0</b></span></div>
+      <nav class="menu"><button data-nav class="btn btn-primary" data-action="race"><span data-i18n="menu.race"></span><b>↙</b></button><button data-nav class="btn" data-action="campaign"><span data-i18n="menu.campaign"></span></button><button data-nav class="btn btn-accent" data-action="garage"><span data-i18n="menu.garage"></span></button><button data-nav class="btn btn-quiet" data-action="settings"><span data-i18n="menu.settings"></span></button></nav>
+    </div>
+    <aside class="title-side"><div class="next-stage" data-slot="home-next"></div><div class="crew" data-slot="home-crew"></div></aside>
   </div>
   <div class="title-bottom"><span data-i18n="controls.title"></span><p data-i18n="controls.keyboard"></p><p data-i18n="controls.gamepad"></p><p data-i18n="controls.phone"></p></div>
 </section>
@@ -376,8 +454,9 @@ export class RallyUi {
 <section class="screen screen-garage" data-screen="garage">
   <header class="panel-heading"><button data-nav class="icon-btn" data-action="back" aria-label="رجوع">‹</button><div><p class="eyebrow" data-i18n="shop.tip"></p><h2 data-i18n="shop.title"></h2></div><div class="wallet"><span aria-hidden="true">Z</span><b data-slot="garage-coins">0</b><small data-i18n="money.coins"></small></div></header>
   <div class="garage-content">
-    <div class="car-grid"></div>
+    <div class="garage-main"><h3 class="garage-sub">اختر السائق</h3><div class="driver-grid"></div><h3 class="garage-sub">السيارات</h3><div class="car-grid"></div></div>
     <aside class="upgrade-panel">
+      <div class="look-panel"></div>
       <h3 data-i18n="shop.upgrades"></h3><p class="shop-note" data-i18n="shop.tip"></p>
       <button data-nav class="upgrade-card" data-action="upgrade" data-upgrade="engine"></button>
       <button data-nav class="upgrade-card" data-action="upgrade" data-upgrade="tires"></button>
@@ -387,14 +466,17 @@ export class RallyUi {
   </div>
 </section>
 <section class="screen screen-hud" data-screen="hud">
-  <div class="hud-top"><div class="hud-panel stage-panel"><span class="hud-symbol">✦</span><div><b data-slot="hud-stage">المرحلة 1</b><small data-slot="hud-lap">اللفة 1/2</small></div></div><div class="race-position"><b data-slot="hud-position">المركز 1/7</b><small data-slot="hud-time">00:00</small><small class="hud-impacts" data-slot="hud-impacts">اصطدامات ٠/٥</small></div><div class="hud-right"><div class="hud-coins"><span aria-hidden="true">Z</span><b data-slot="hud-coins">0</b></div><button class="hud-pause" data-action="pause" data-i18n-label="touch.pause" aria-label="توقف مؤقت">Ⅱ</button></div></div>
+  <div class="hud-top"><div class="hud-panel stage-panel"><span class="hud-symbol">✦</span><div><b data-slot="hud-stage">المرحلة 1</b><small data-slot="hud-lap">اللفة 1/2</small></div></div><div class="race-position"><b data-slot="hud-position">المركز 1/7</b><small data-slot="hud-time">00:00</small><small class="hud-impacts" data-slot="hud-impacts">اصطدامات ٠/٥</small></div><div class="hud-right"><div class="hud-coins"><span aria-hidden="true">Z</span><b data-slot="hud-coins">0</b></div><button class="hud-camera" data-action="camera" aria-label="تبديل الكاميرا" data-slot="hud-camera">🎥</button><button class="hud-pause" data-action="pause" data-i18n-label="touch.pause" aria-label="توقف مؤقت">Ⅱ</button></div></div>
+  <div class="hud-conditions" data-slot="hud-conditions"></div>
+  <ol class="standings"></ol>
+  <div class="codriver" role="status"><img src="${mazenImg}" alt="" width="44" height="44"><div><small>${CO_DRIVER.name}</small><b data-slot="codriver-text"></b></div></div>
   <div class="speed-gauge"><div class="speed-readout"><strong data-slot="hud-speed">0</strong><small data-i18n="hud.speed"></small></div></div>
   <div class="turbo-box"><div><span data-i18n="hud.turbo"></span><b data-slot="turbo-percent">0%</b></div><small data-slot="turbo-name"></small><div class="turbo-meter"><i class="turbo-fill"></i></div></div>
   <div class="race-signal" aria-live="assertive" aria-hidden="true"></div><div class="hud-impact-reset" role="status" data-i18n="hud.impactReset"></div><div class="hud-warning" data-i18n="hud.crash"></div><div class="hud-drift" data-i18n="hud.drift"></div>
   <div class="touch"><div class="touch-stick"><i></i><span><span data-i18n="touch.steering"></span><br><span data-i18n="touch.acceleration"></span></span></div><button class="touch-btn touch-gas" data-touch="throttle"><b>▲</b><span data-i18n="touch.gas"></span></button><button class="touch-btn touch-brake" data-touch="brake"><b>▼</b><span data-i18n="touch.brake"></span></button><button class="touch-btn touch-turbo" data-touch="turbo" data-i18n-label="touch.turboLocked" aria-label="تيربو مقفل"><b>⚡</b><span data-i18n="touch.turbo"></span></button></div>
 </section>
 <section class="screen screen-modal" data-screen="pause"><div class="modal-card"><p class="eyebrow" data-i18n="game.title"></p><h2 data-i18n="pause.title"></h2><nav class="menu"><button data-nav class="btn btn-primary" data-action="resume"><span data-i18n="menu.resume"></span></button><button data-nav class="btn" data-action="restart"><span data-i18n="menu.restart"></span></button><button data-nav class="btn" data-action="garage"><span data-i18n="menu.garage"></span></button><button data-nav class="btn" data-action="settings"><span data-i18n="menu.settings"></span></button><button data-nav class="btn btn-quiet" data-action="quit"><span data-i18n="menu.quit"></span></button></nav></div></section>
-<section class="screen screen-modal" data-screen="settings"><div class="modal-card settings-card"><header class="panel-heading"><button data-nav class="icon-btn" data-action="back" aria-label="رجوع">‹</button><h2 data-i18n="settings.title"></h2></header><fieldset><legend data-i18n="settings.audio"></legend>${range('musicVolume', 'settings.music', 0, 1, 0.05)}${range('sfxVolume', 'settings.sfxVolume', 0, 1, 0.05)}${toggle('muted', 'settings.mute')}</fieldset><fieldset><legend data-i18n="settings.controls"></legend>${range('sensitivity', 'settings.sensitivity', 0.5, 1.8, 0.1)}</fieldset><fieldset><legend data-i18n="settings.display"></legend><div class="setting-row"><span data-i18n="settings.quality"></span><div class="quality-segment"><button data-nav class="quality-choice" data-value="low" data-i18n="settings.low"></button><button data-nav class="quality-choice" data-value="medium" data-i18n="settings.medium"></button><button data-nav class="quality-choice" data-value="high" data-i18n="settings.high"></button></div></div>${toggle('reducedMotion', 'settings.reduceMotion')}</fieldset></div></section>
+<section class="screen screen-modal" data-screen="settings"><div class="modal-card settings-card"><header class="panel-heading"><button data-nav class="icon-btn" data-action="back" aria-label="رجوع">‹</button><h2 data-i18n="settings.title"></h2></header><fieldset><legend data-i18n="settings.audio"></legend>${range('musicVolume', 'settings.music', 0, 1, 0.05)}${range('sfxVolume', 'settings.sfxVolume', 0, 1, 0.05)}${toggle('muted', 'settings.mute')}</fieldset><fieldset><legend data-i18n="settings.controls"></legend>${range('sensitivity', 'settings.sensitivity', 0.5, 1.8, 0.1)}</fieldset><fieldset><legend data-i18n="settings.display"></legend><div class="setting-row"><span data-i18n="settings.quality"></span><div class="quality-segment"><button data-nav class="quality-choice" data-value="low" data-i18n="settings.low"></button><button data-nav class="quality-choice" data-value="medium" data-i18n="settings.medium"></button><button data-nav class="quality-choice" data-value="high" data-i18n="settings.high"></button></div></div>${toggle('reducedMotion', 'settings.reduceMotion')}</fieldset><fieldset><legend>الملّاح</legend>${toggle('coDriverVoice', 'settings.coDriverVoice')}</fieldset></div></section>
 <section class="screen screen-modal screen-results" data-screen="results"><div class="modal-card results-panel"><div class="results-emblem">🏁</div><p class="eyebrow" data-slot="results-stage"></p><h2 class="results-title"></h2><div class="results-grid"><div><span data-i18n="results.time"></span><b data-slot="results-time"></b></div><div><span data-i18n="results.reward"></span><b data-slot="results-reward"></b></div><div><span data-i18n="results.balance"></span><b data-slot="results-coins"></b></div></div><p class="results-unranked" data-i18n="results.unranked"></p><nav class="menu"><button data-nav class="btn btn-primary" data-action="next"><span data-i18n="menu.next"></span></button><button data-nav class="btn" data-action="restart"><span data-i18n="results.retry"></span></button><button data-nav class="btn" data-action="campaign"><span data-i18n="results.map"></span></button><button data-nav class="btn btn-quiet" data-action="quit"><span data-i18n="results.home"></span></button></nav></div></section>`
   }
 }
