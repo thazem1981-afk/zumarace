@@ -1,7 +1,11 @@
+import type { DriverId } from '../game/characters'
+import { parseGarage, type Garage } from '../game/customization'
 import { CAMPAIGN_CARS, TURBO_TYPES, defaultRaceProgress, type CarId, type RaceProgress, type TurboTypeId } from '../game/campaign'
 
 export type Locale = 'ar'
 export type Quality = 'low' | 'medium' | 'high'
+export type CameraMode = 'chase' | 'far' | 'hood' | 'bumper' | 'tv'
+export const CAMERA_MODES: readonly CameraMode[] = ['chase', 'far', 'hood', 'bumper', 'tv']
 
 export type SaveData = {
   version: 2
@@ -19,6 +23,10 @@ export type SaveData = {
   playerName: string
   leaderboard: ScoreEntry[]
   raceProgress: RaceProgress
+  driver: DriverId
+  garage: Garage
+  cameraMode: CameraMode
+  coDriverVoice: boolean
 }
 
 export type ScoreEntry = { name: string; score: number; seconds: number; at: number }
@@ -42,6 +50,10 @@ export function defaultSave(): SaveData {
     playerName: 'سائق',
     leaderboard: [],
     raceProgress: defaultRaceProgress(),
+    driver: 'salem',
+    garage: {},
+    cameraMode: 'chase',
+    coDriverVoice: true,
   }
 }
 
@@ -129,6 +141,10 @@ export function parseSave(raw: string | null): SaveData {
     quality: data.quality === 'low' || data.quality === 'medium' || data.quality === 'high' ? data.quality : base.quality,
     reducedMotion: data.reducedMotion === true,
     raceProgress: data.version === 2 ? parseRaceProgress(data.raceProgress) : base.raceProgress,
+    driver: data.driver === 'layla' || data.driver === 'karim' || data.driver === 'salem' ? data.driver : base.driver,
+    garage: parseGarage(data.garage, VALID_CAR_IDS),
+    cameraMode: CAMERA_MODES.includes(data.cameraMode as CameraMode) ? data.cameraMode as CameraMode : base.cameraMode,
+    coDriverVoice: data.coDriverVoice !== false,
   }
 }
 
