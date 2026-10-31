@@ -435,9 +435,8 @@ export class RallyGame {
     }
     this.atmosphere.update(frameSeconds, this.vehicle.position, this.mode === 'playing', this.reducedMotion)
     this.track.setWetness(this.atmosphere.wetness)
-    const targetFov = CONFIG.camera.fov + (this.reducedMotion ? 0 : this.nitroEffect * 4.5)
-    if (Math.abs(this.camera.fov - targetFov) > 0.01) {
-      this.camera.fov = targetFov
+    if ((this.mode === 'attract' || this.mode === 'ended') && Math.abs(this.camera.fov - CONFIG.camera.fov) > 0.01) {
+      this.camera.fov = CONFIG.camera.fov
       this.camera.updateProjectionMatrix()
     }
     const sample = this.track.sample(this.trackDistance, this.laneOffset)
@@ -763,12 +762,6 @@ export class RallyGame {
       ;(flame.material as THREE.MeshBasicMaterial).opacity = nitro * 0.85
     }
     const dustLevel = THREE.MathUtils.clamp(Math.abs(speed) / CONFIG.race.maxSpeed * 0.24 + Math.min(0.16, Math.abs(lateral) * 0.018) + (drifting ? 0.16 : 0), 0, 0.52)
-    const sandPuffs = body.userData.sandPuffs as THREE.Mesh[] | undefined
-    sandPuffs?.forEach((puff, index) => {
-      puff.visible = dustLevel > 0.025
-      puff.scale.set(0.55 + dustLevel, 0.22 + dustLevel * 0.3, 0.7 + dustLevel * 1.6)
-      ;(puff.material as THREE.MeshBasicMaterial).opacity = dustLevel * (index === 0 ? 0.62 : 0.82)
-    })
   }
 
   private buildRivals(): void {
