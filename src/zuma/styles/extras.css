@@ -1,0 +1,69 @@
+body, #ui { color: #fff6e8 }
+/* Title screen, crew, garage customisation and race HUD additions. */
+.screen-title {
+  background:
+    radial-gradient(120% 80% at 85% 50%, rgba(10, 12, 16, 0.78), transparent 60%),
+    linear-gradient(0deg, rgba(10, 12, 16, 0.7), transparent 40%),
+    linear-gradient(180deg, rgba(10, 12, 16, 0.55), transparent 22%) !important;
+}
+.title-layout { display: flex; align-items: center; justify-content: space-between; gap: 32px; flex: 1; min-height: 0 }
+.title-layout .title-copy { margin: 0 !important; width: min(520px, 52vw) }
+.title-logo { display: flex; flex-direction: column; line-height: 0.86 !important; margin: 6px 0 4px !important; direction: ltr; text-align: right; letter-spacing: -0.02em }
+.title-logo span { font-size: clamp(56px, 9vw, 120px); font-weight: 800; background: linear-gradient(180deg, #fff8ea 30%, #f3b65a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.45)) }
+.title-logo em { font-style: normal; font-size: clamp(18px, 2.6vw, 30px); letter-spacing: 0.62em; color: #f3a647; margin-top: 8px; padding-right: 0.2em; animation: zr-glow 3.2s ease-in-out infinite }
+@keyframes zr-glow { 50% { color: #ffe0a8; text-shadow: 0 0 18px rgba(243, 166, 71, 0.6) } }
+.title-side { width: min(340px, 34vw); display: flex; flex-direction: column; gap: 12px; animation: zr-in 0.7s ease both 0.15s }
+@keyframes zr-in { from { opacity: 0; transform: translateX(-24px) } }
+.next-stage, .crew { color: #fff6e8; border: 1px solid rgba(255, 239, 210, 0.17); border-radius: 18px; background: rgba(18, 20, 24, 0.7); backdrop-filter: blur(14px); padding: 14px 16px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3) }
+.next-stage small, .crew small { display: block; font-size: 11px; color: #c8c1b5; letter-spacing: 0.06em }
+.next-stage strong { display: block; font-size: 22px; margin: 4px 0 10px }
+.cond-chips { display: flex; flex-wrap: wrap; gap: 6px }
+.cond-chips span { padding: 4px 10px; border-radius: 99px; background: rgba(243, 166, 71, 0.16); border: 1px solid rgba(243, 166, 71, 0.35); font-size: 12px; color: #ffe2a5 }
+.crew { display: flex; flex-direction: column; gap: 10px }
+.crew-person { display: flex; align-items: center; gap: 12px }
+.crew-person img { width: 52px; height: 52px; border-radius: 14px; object-fit: cover; border: 2px solid rgba(243, 166, 71, 0.5) }
+.crew-person b, .crew-car b { display: block; font-size: 15px }
+.crew-person em { font-style: normal; font-size: 11px; color: #8fd3c8 }
+.crew-car { border-top: 1px solid rgba(255, 239, 210, 0.12); padding-top: 8px }
+@media (max-width: 760px), (max-height: 520px) { .title-side { display: none } .title-layout .title-copy { width: 100% } }
+
+/* Garage */
+.garage-main { display: flex; flex-direction: column; gap: 10px; min-width: 0; overflow: auto; flex: 1 }
+.garage-main .car-grid { overflow: visible !important; max-height: none !important }
+.garage-sub { margin: 4px 0 0; font-size: 15px; color: #ffe2a5 }
+.driver-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px }
+.driver-card { display: flex; align-items: center; gap: 10px; text-align: right; padding: 10px; border-radius: 16px; border: 1px solid rgba(255, 239, 210, 0.17); background: rgba(25, 27, 29, 0.84); cursor: pointer; transition: transform 0.15s, border-color 0.15s }
+.driver-card:hover, .driver-card:focus-visible { transform: translateY(-2px); border-color: var(--suit) }
+.driver-card.is-selected { border-color: var(--suit); box-shadow: 0 0 0 2px var(--suit) inset }
+.driver-card img { width: 58px; height: 58px; border-radius: 12px; object-fit: cover; flex: none }
+.driver-card b { display: block; font-size: 14px }
+.driver-card small { display: block; font-size: 11px; color: #c8c1b5 }
+.driver-card em { display: block; font-style: normal; font-size: 11px; color: #8fd3c8; margin-top: 2px }
+.look-panel { border: 1px solid rgba(255, 239, 210, 0.17); border-radius: 16px; padding: 12px; background: rgba(255, 255, 255, 0.03); margin-bottom: 10px }
+.look-panel h3 { margin: 0 0 4px; font-size: 15px }
+.look-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px }
+.look-row > span { font-size: 12px; color: #c8c1b5; flex: none }
+.swatches, .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.25); background: var(--c); cursor: pointer; padding: 0 }
+.swatch.is-on { border-color: #fff; box-shadow: 0 0 0 2px #f3a647 }
+.chip { padding: 5px 10px; border-radius: 99px; border: 1px solid rgba(255, 239, 210, 0.2); background: rgba(25, 27, 29, 0.84); font-size: 12px; cursor: pointer }
+.chip.is-on { background: #f3a647; color: #1b1712; border-color: #f3a647 }
+.car-number { min-width: 30px; text-align: center; font-size: 16px }
+@media (max-width: 760px) { .driver-grid { grid-template-columns: 1fr } }
+
+/* HUD */
+.hud-camera { pointer-events: auto; border: 1px solid rgba(255, 239, 210, 0.2); border-radius: 12px; background: rgba(20, 22, 26, 0.7); padding: 8px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; margin-inline-end: 6px }
+.hud-conditions { position: absolute; top: 118px; left: 50%; transform: translateX(-50%); font-size: 12px; padding: 4px 12px; border-radius: 99px; background: rgba(18, 20, 24, 0.55); color: #ffe2a5; white-space: nowrap }
+.standings { position: absolute; top: 110px; right: 18px; margin: 0; padding: 8px; list-style: none; border-radius: 14px; background: rgba(18, 20, 24, 0.6); backdrop-filter: blur(8px); font-size: 12px; min-width: 150px }
+.standings li { display: flex; gap: 8px; padding: 3px 6px; border-radius: 8px; color: #e8e1d5 }
+.standings li b { width: 16px; color: #c8c1b5 }
+.standings li.is-player { background: rgba(243, 166, 71, 0.85); color: #1b1712 }
+.standings li.is-player b { color: #1b1712 }
+.codriver { position: absolute; top: 152px; left: 50%; transform: translate(-50%, -10px); display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 10px; border-radius: 16px; background: rgba(14, 18, 24, 0.82); border: 1px solid rgba(143, 211, 200, 0.4); opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none }
+.codriver.is-visible { opacity: 1; transform: translate(-50%, 0) }
+.codriver.is-urgent { border-color: #df7754; box-shadow: 0 0 24px rgba(223, 119, 84, 0.45) }
+.codriver img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover }
+.codriver small { display: block; font-size: 10px; color: #8fd3c8 }
+.codriver b { font-size: clamp(16px, 2.2vw, 22px) }
+@media (max-width: 760px) { .standings { display: none } .hud-conditions { top: 100px; font-size: 10px } .codriver { top: 128px } }
+@media (max-height: 900px) { .screen-title .title-bottom { display: none } }

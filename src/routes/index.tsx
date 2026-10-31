@@ -1,24 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Zuma Rally — رالي ثلاثي الأبعاد بطقس متغيّر" },
+      { name: "description", content: "قد سيارتك في 100 مرحلة رالي بين الصحراء والغابات والثلوج والجبال والسواحل، مع طقس وليل ونهار وملّاح يقرأ المنعطفات." },
+      { property: "og:title", content: "Zuma Rally — رالي ثلاثي الأبعاد" },
+      { property: "og:description", content: "100 مرحلة رالي بطقس ديناميكي وكاميرات متعددة وملّاح وكراج لتخصيص السيارات." },
+    ],
+  }),
+  component: Game,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Game() {
+  useEffect(() => {
+    import("../zuma/main-rally").then((m) => m.boot()).catch((error) => {
+      console.error(error);
+      const root = document.getElementById("ui");
+      if (root) root.innerHTML = '<div class="fatal">تعذّر تشغيل اللعبة. أعد تحميل الصفحة للمحاولة مرة أخرى.</div>';
+    });
+  }, []);
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <>
+      <canvas id="game" aria-label="مضمار رالي ثلاثي الأبعاد" />
+      <div id="ui" />
+    </>
   );
 }
