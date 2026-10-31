@@ -586,7 +586,10 @@ export class RallyGame {
       }
       const topY = this.body.userData.topY as number
       const frontZ = this.body.userData.frontZ as number
-      desired.copy(car).addScaledVector(h, hood ? 0.4 : frontZ + 0.3).add(new THREE.Vector3(0, hood ? topY + 0.18 : 0.72, 0))
+      void topY
+      // Cockpit view hides the player's own body so imported models never block the windscreen.
+      if (hood) this.body.visible = false
+      desired.copy(car).addScaledVector(h, hood ? 0.6 : frontZ + 0.3).add(new THREE.Vector3(0, hood ? 1.35 : 0.72, 0))
       target.copy(car).addScaledVector(h, 30).add(new THREE.Vector3(0, hood ? 1.1 : 0.9, 0))
       follow = 60
       fovBoost = 6
