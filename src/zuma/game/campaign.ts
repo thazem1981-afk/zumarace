@@ -12,28 +12,21 @@ export type CampaignStage = Readonly<{
   rewardCoins: number
 }>
 
-const STAGE_NAMES = [
-  'رمل الفجر', 'وادي السراب', 'كثيب العنبر', 'ممر النخيل', 'هضبة الريح',
-  'عين الغبار', 'قوس الرمال', 'سهل الظمأ', 'درب القمر', 'واحة الصمت',
-  'تل الذهب', 'شق الزمرد', 'سنام الجمل', 'ساحة القيظ', 'مضيق السكون',
-  'خيمة البيداء', 'حافة السراب', 'مجرى الوادي', 'كثيب اللؤلؤ', 'درب الشهب',
-  'مرتفَع النوق', 'سهل الياقوت', 'عين النخيل', 'جرف الرمال', 'بوابة القيظ',
-  'قاع البلور', 'ممر الواحة', 'هضبة الصقور', 'رابية العنبر', 'وادي النيازك',
-  'درب الملح', 'رمل الياقوت', 'سنام الريح', 'فج القوافل', 'تل السحاب',
-  'عين السراب', 'مضمار الظلال', 'سهل الكثبان', 'ممر العقيق', 'رابية الهلال',
-  'وادي الزعفران', 'حافة النخيل', 'درب الغسق', 'قوس الغبار', 'قاع الرمال',
-  'هضبة الجمر', 'واحة البريق', 'شق القوافل', 'تل المها', 'سهل النجوم',
-  'ممر السدر', 'عين الرمال', 'رابية الشفق', 'وادي الفضة', 'درب الصقور',
-  'كثيب المرجان', 'فج السراب', 'سنام النخيل', 'قاع العنبر', 'بوابة القمر',
-  'تل العواصف', 'سهل البلور', 'مضيق الرمال', 'هضبة الندى', 'درب السيوف',
-  'واحة الشروق', 'شق الهلال', 'رابية الغيم', 'وادي العقيق', 'قوس النخيل',
-  'مرتفَع السراب', 'عين الزمرد', 'فج الرمال', 'سهل العنقاء', 'تل الزعفران',
-  'ممر الجمر', 'درب الواحة', 'حافة الشفق', 'قاع النيازك', 'هضبة اللؤلؤ',
-  'وادي القوافل', 'رابية الذهب', 'سنام الصقور', 'مضمار الغسق', 'عين البلور',
-  'كثيب الشهب', 'بوابة الرمال', 'سهل المها', 'شق العواصف', 'تل السدر',
-  'درب الياقوت', 'واحة الهلال', 'هضبة العنبر', 'قوس الشفق', 'وادي النجوم',
-  'فج النخيل', 'قمة السراب', 'ميدان البيداء', 'قلب الصحراء', 'عرش الرمال',
-] as const
+import { BIOME_ORDER, type BiomeId } from './environment'
+
+const BIOME_STAGE_NAMES: Readonly<Record<BiomeId, readonly string[]>> = {
+  desert: ['رمل الفجر', 'كثيب العنبر', 'سهل الظمأ', 'واحة الصمت', 'تل الذهب', 'ساحة القيظ', 'خيمة البيداء', 'كثيب اللؤلؤ', 'درب الملح', 'فج القوافل', 'سهل الكثبان', 'قاع الرمال', 'واحة البريق', 'بوابة القمر', 'ميدان البيداء', 'قلب الصحراء', 'عرش الرمال'],
+  forest: ['درب الصنوبر', 'غابة الضباب', 'جدول الطحالب', 'ممر البلوط', 'وادي السراخس', 'جسر الخشب', 'غابة المطر', 'منحدر الأرز', 'درب الحطابين', 'بحيرة الظلال', 'أعماق الغابة', 'تلة الزان', 'مستنقع الطين', 'قوس الأغصان', 'نبع الصفصاف', 'سياج الغابة', 'قلب الأدغال'],
+  canyon: ['وادي النيازك', 'شق الزمرد', 'جرف الصقور', 'مضيق الصدى', 'قوس الصخر الأحمر', 'هضبة الجمر', 'ممر العقيق', 'قاع البلور', 'جدار الريح', 'مضيق السكون', 'درب الحجارة', 'فج العواصف', 'شرفة الوادي', 'ممر الكهوف', 'منعطف الأفعى', 'بوابة الوادي', 'عرش الصخور'],
+  snow: ['قمة الجليد', 'ممر الصقيع', 'بحيرة متجمدة', 'غابة الثلج', 'منحدر الشتاء', 'وادي البرد', 'جسر الجليد', 'هضبة البياض', 'درب الزلاجات', 'كوخ الحطّاب', 'سهل الثلوج', 'نهر متجمد', 'قمة العاصفة', 'منعطف الانهيار', 'قرية الشمال', 'ممر الشفق القطبي', 'عرش الجليد'],
+  coast: ['كورنيش الموج', 'رأس المنارة', 'خليج اللؤلؤ', 'طريق النخيل الساحلي', 'ميناء الصيادين', 'جرف البحر', 'شاطئ المرجان', 'جسر الخليج', 'لسان الرمل', 'قرية المرفأ', 'منحدر النوارس', 'طريق الملاحات', 'شاطئ الغروب', 'رصيف السفن', 'خليج العواصف', 'جزيرة الصخور', 'تاج الساحل'],
+  mountain: ['ممر الجبل', 'منعطفات الدبوس', 'قمة السحاب', 'هضبة الرعاة', 'وادي الشلالات', 'طريق القلعة', 'منحدر الحصى', 'سفح الصنوبر', 'جسر المضيق', 'قرية الجبل', 'حافة الهاوية', 'ممر النسور', 'درب المنجم', 'سرج الجبل', 'هضبة الضباب', 'قمة الريح', 'سقف العالم'],
+}
+
+const STAGE_NAMES = Array.from({ length: 100 }, (_, index) => {
+  const biome = BIOME_ORDER[index % BIOME_ORDER.length]
+  return BIOME_STAGE_NAMES[biome][Math.floor(index / BIOME_ORDER.length)]
+})
 
 /** The complete, immutable, one-based campaign table. */
 export const CAMPAIGN_STAGES: readonly CampaignStage[] = Object.freeze(
@@ -43,7 +36,8 @@ export const CAMPAIGN_STAGES: readonly CampaignStage[] = Object.freeze(
       number,
       name,
       difficulty: number,
-      timeLimitSeconds: Math.round(165 - (number - 1) * (71 / 99)),
+      // Tracks are ~1.7× longer than the original loops, so time limits scale with them.
+      timeLimitSeconds: Math.round((165 - (number - 1) * (71 / 99)) * 1.75),
       rewardCoins: 100 + Math.floor((number - 1) * 6.5),
     })
   }),
@@ -106,15 +100,15 @@ export const CAR_ABILITIES: Readonly<Record<CarAbilityId, CarAbilityProfile>> = 
 
 /** Store inventory: first car is free; the remaining cars cost in-game coins only. */
 export const CAMPAIGN_CARS: readonly CampaignCar[] = Object.freeze([
-  Object.freeze({ id: 'dune-runner', name: 'عدّاء الرمال', price: 0, acceleration: 6, topSpeed: 6, handling: 6, grip: 6, color: '#d79a45', design: 'glb', ability: 'launch' }),
-  Object.freeze({ id: 'sand-hawk', name: 'صقر الوادي', price: 500, acceleration: 7, topSpeed: 7, handling: 6, grip: 7, color: '#45a6a0', design: 'rally-hatch', ability: 'grip' }),
-  Object.freeze({ id: 'mirage-gt', name: 'سراب جي تي', price: 1_500, acceleration: 8, topSpeed: 8, handling: 8, grip: 7, color: '#8f70d6', design: 'coupe', ability: 'speed' }),
-  Object.freeze({ id: 'desert-king', name: 'ملك الصحراء', price: 3_500, acceleration: 9, topSpeed: 10, handling: 8, grip: 9, color: '#d35448', design: '4x4', ability: 'armor' }),
-  Object.freeze({ id: 'zuma-rs', name: 'زوما آر إس', price: 4_800, acceleration: 9, topSpeed: 10, handling: 9, grip: 9, color: '#45a6d4', design: 'sedan', ability: 'cornering' }),
-  Object.freeze({ id: 'dune-pickup', name: 'بيك أب الكثبان', price: 6_400, acceleration: 8, topSpeed: 8, handling: 8, grip: 10, color: '#72a455', design: 'pickup', ability: 'recharge' }),
-  Object.freeze({ id: 'storm-buggy', name: 'عاصفة باجي', price: 8_500, acceleration: 10, topSpeed: 9, handling: 10, grip: 9, color: '#e77a3d', design: 'buggy', ability: 'drift' }),
-  Object.freeze({ id: 'falcon-rally', name: 'صقر الرالي', price: 10_800, acceleration: 9, topSpeed: 11, handling: 9, grip: 10, color: '#4b8182', design: 'rally-truck', ability: 'turbo' }),
-  Object.freeze({ id: 'atlas-suv', name: 'أطلس الصحراوي', price: 13_200, acceleration: 10, topSpeed: 11, handling: 9, grip: 10, color: '#c7a64b', design: 'suv', ability: 'terrain' }),
+  Object.freeze({ id: 'dune-runner', name: 'هاتشباك رالي R2', price: 0, acceleration: 6, topSpeed: 6, handling: 6, grip: 6, color: '#d79a45', design: 'glb', ability: 'launch' }),
+  Object.freeze({ id: 'sand-hawk', name: 'هاتشباك تيربو 1.6', price: 500, acceleration: 7, topSpeed: 7, handling: 6, grip: 7, color: '#45a6a0', design: 'rally-hatch', ability: 'grip' }),
+  Object.freeze({ id: 'mirage-gt', name: 'كوبيه GT 3.0', price: 1_500, acceleration: 8, topSpeed: 8, handling: 8, grip: 7, color: '#8f70d6', design: 'coupe', ability: 'speed' }),
+  Object.freeze({ id: 'desert-king', name: 'دفع رباعي V8 4×4', price: 3_500, acceleration: 9, topSpeed: 10, handling: 8, grip: 9, color: '#d35448', design: '4x4', ability: 'armor' }),
+  Object.freeze({ id: 'zuma-rs', name: 'سيدان رالي RS', price: 4_800, acceleration: 9, topSpeed: 10, handling: 9, grip: 9, color: '#45a6d4', design: 'sedan', ability: 'cornering' }),
+  Object.freeze({ id: 'dune-pickup', name: 'بيك أب ديزل 2.8', price: 6_400, acceleration: 8, topSpeed: 8, handling: 8, grip: 10, color: '#72a455', design: 'pickup', ability: 'recharge' }),
+  Object.freeze({ id: 'storm-buggy', name: 'باجي رملي 1000cc', price: 8_500, acceleration: 10, topSpeed: 9, handling: 10, grip: 9, color: '#e77a3d', design: 'buggy', ability: 'drift' }),
+  Object.freeze({ id: 'falcon-rally', name: 'شاحنة رالي T5', price: 10_800, acceleration: 9, topSpeed: 11, handling: 9, grip: 10, color: '#4b8182', design: 'rally-truck', ability: 'turbo' }),
+  Object.freeze({ id: 'atlas-suv', name: 'SUV رالي ريد T1+', price: 13_200, acceleration: 10, topSpeed: 11, handling: 9, grip: 10, color: '#c7a64b', design: 'suv', ability: 'terrain' }),
 ])
 
 export const TURBO_TYPES = Object.freeze([
