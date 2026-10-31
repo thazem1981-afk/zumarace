@@ -132,7 +132,7 @@ export class RallyUi {
       const selected = progress.selectedCar === car.id
       const action = owned ? 'select-car' : 'buy-car'
       const actionText = selected ? this.i18n.t('shop.selected') : owned ? this.i18n.t('shop.select') : this.i18n.t('shop.buy', { price: number(car.price) })
-      return `<article class="car-card${selected ? ' is-selected' : ''}" style="--car-color:${car.color}">
+      return `<article class="car-card${selected ? ' is-selected' : ''}" style="--car-color:${lookFor(this.save.data.garage, car.id).paint ?? car.color}">
         <div class="car-swatch car-swatch-${car.design}" aria-hidden="true"><span></span><i></i></div>
         <div class="car-card-copy"><h3>${escapeHtml(car.name)}</h3><p>${this.i18n.t('shop.speed')}: ${number(car.topSpeed)} · ${this.i18n.t('shop.acceleration')}: ${number(car.acceleration)}</p><p>${this.i18n.t('shop.grip')}: ${number(car.grip)}</p><p class="car-ability"><b>${this.i18n.t('shop.ability')}: ${this.i18n.t(`carAbility.${car.ability}.name`)}</b> — ${this.i18n.t(`carAbility.${car.ability}.desc`)}</p></div>
         <button data-nav class="btn ${selected ? 'btn-selected' : owned ? '' : 'btn-accent'}" data-action="${action}" data-car="${car.id}" ${selected || (!owned && progress.coins < car.price) ? 'disabled' : ''}>${escapeHtml(actionText)}</button>
