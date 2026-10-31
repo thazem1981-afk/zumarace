@@ -1,0 +1,348 @@
+/* Race-day presentation for Zuma Race: a warm title ribbon, confident start CTA and live countdown. */
+.title-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  margin: 0 0 12px;
+  padding: 7px 11px;
+  border: 1px solid rgba(242, 198, 119, 0.36);
+  border-radius: 999px;
+  background: linear-gradient(100deg, rgba(242, 166, 67, 0.17), rgba(42, 51, 55, 0.74));
+  color: #ffe2a5;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.17);
+}
+.title-ribbon > i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f3a647;
+  box-shadow: 0 0 12px rgba(243, 166, 71, 0.9);
+}
+.title-ribbon > b {
+  padding-inline: 6px;
+  border-inline-start: 1px solid rgba(255, 226, 165, 0.34);
+  color: #fff9eb;
+  font-variant-numeric: tabular-nums;
+}
+.screen-title .title-copy h1 {
+  text-shadow: 0 5px 28px rgba(242, 166, 67, 0.2);
+}
+.wordmark .brand-emblem {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 236, 199, 0.38);
+  border-radius: 14px 5px 14px 5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32), 0 0 18px rgba(46, 193, 178, 0.17);
+}
+.screen-title .menu .btn-primary {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(217, 117, 48, 0.23);
+  animation: race-cta-glow 2.6s ease-in-out infinite;
+}
+.screen-title .menu .btn-primary::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -45%;
+  width: 28%;
+  transform: skewX(-22deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.27), transparent);
+  animation: race-cta-sweep 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.race-signal {
+  position: absolute;
+  z-index: 15;
+  top: 48%;
+  left: 50%;
+  display: grid;
+  width: min(25vw, 210px);
+  aspect-ratio: 1;
+  place-items: center;
+  transform: translate(-50%, -50%) scale(0.72);
+  border: 2px solid rgba(255, 231, 183, 0.82);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(247, 173, 69, 0.54), rgba(28, 30, 33, 0.76) 68%);
+  box-shadow: 0 0 0 10px rgba(241, 167, 70, 0.1), 0 0 44px rgba(249, 175, 66, 0.43), inset 0 0 28px rgba(255, 224, 161, 0.22);
+  color: #fff8e8;
+  font-size: clamp(48px, 11vh, 92px);
+  font-weight: 950;
+  line-height: 1;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+.race-signal.is-active {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  visibility: visible;
+  animation: race-signal-pulse 0.7s ease-in-out infinite alternate;
+}
+.race-signal[data-value="go"] {
+  width: min(31vw, 270px);
+  aspect-ratio: auto;
+  min-height: 112px;
+  padding: 22px 30px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(44, 144, 97, 0.93), rgba(21, 86, 65, 0.92));
+  font-size: clamp(36px, 8vh, 68px);
+}
+.car-swatch-buggy::before {
+  width: 58px;
+  height: 20px;
+  border-radius: 12px 12px 4px 4px;
+}
+.car-swatch-buggy span {
+  width: 24px;
+  height: 8px;
+  margin-top: -15px;
+  background: #becdd0;
+}
+.car-swatch-rally-truck::before {
+  width: 72px;
+  height: 28px;
+  border-radius: 10px 11px 5px 5px;
+}
+.car-swatch-rally-truck span {
+  width: 28px;
+  height: 9px;
+  margin-top: -14px;
+}
+.car-swatch-suv::before {
+  width: 70px;
+  height: 28px;
+  border-radius: 11px 13px 7px 7px;
+  transform: skewX(-8deg);
+}
+.car-swatch-suv span {
+  width: 34px;
+  height: 12px;
+  margin-top: -13px;
+}
+@keyframes race-cta-glow {
+  0%, 100% { box-shadow: 0 8px 28px rgba(217, 117, 48, 0.18); }
+  50% { box-shadow: 0 10px 34px rgba(245, 168, 71, 0.42); }
+}
+@keyframes race-cta-sweep {
+  0%, 25% { inset-inline-start: -45%; }
+  55%, 100% { inset-inline-start: 125%; }
+}
+@keyframes race-signal-pulse {
+  from { transform: translate(-50%, -50%) scale(0.96); }
+  to { transform: translate(-50%, -50%) scale(1.04); }
+}
+@media (max-width: 560px) {
+  .title-ribbon { margin-bottom: 7px; padding: 6px 9px; font-size: 10px; }
+  .race-signal { width: min(38vw, 160px); font-size: 52px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-title .menu .btn-primary,
+  .screen-title .menu .btn-primary::after,
+  .race-signal.is-active { animation: none; }
+}
+
+
+/* New twilight-rally identity: HUD-friendly teal shadows, amber highlights, angular controls. */
+.screen-boot {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 78% 88%, rgba(209, 119, 54, .28), transparent 35%),
+    linear-gradient(145deg, #101d24 0%, #263b3d 48%, #171d20 100%);
+}
+.screen-boot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .2;
+  background: repeating-linear-gradient(120deg, transparent 0 54px, rgba(255, 255, 255, .055) 55px 56px, transparent 57px 112px);
+  mask-image: linear-gradient(90deg, transparent, #000 50%, transparent);
+}
+.screen-boot::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 35%;
+  background: linear-gradient(0deg, rgba(12, 16, 18, .96), rgba(193, 112, 52, .33));
+  clip-path: polygon(0 79%, 12% 67%, 20% 76%, 31% 42%, 40% 66%, 52% 53%, 61% 72%, 73% 39%, 84% 70%, 93% 55%, 100% 72%, 100% 100%, 0 100%);
+  opacity: .8;
+}
+.screen-boot .boot-card {
+  position: relative;
+  z-index: 1;
+  width: min(460px, 91vw);
+  padding: 36px 32px 30px;
+  overflow: hidden;
+  border: 1px solid rgba(152, 225, 211, .35);
+  border-radius: 24px 8px 24px 8px;
+  background: linear-gradient(150deg, rgba(17, 35, 39, .94), rgba(30, 33, 31, .9));
+  box-shadow: 0 22px 70px rgba(0, 0, 0, .45), inset 0 1px rgba(255, 255, 255, .1);
+  backdrop-filter: blur(18px);
+}
+.screen-boot .boot-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  inset-inline: 14%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #f0aa53, #69c5ad, transparent);
+}
+.screen-boot .boot-card .boot-icon {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 12px;
+  object-fit: cover;
+  border-radius: 19px 7px 19px 7px;
+  box-shadow: 0 0 32px rgba(255, 169, 76, .27);
+  animation: boot-engine-pulse 1.7s ease-in-out infinite alternate;
+}
+.screen-boot .boot-card h1 { margin: 0 0 6px; font-size: clamp(28px, 6vw, 42px); letter-spacing: -.035em; }
+.screen-boot .boot-card p { color: #d8e4df; }
+.screen-boot .boot-bar {
+  height: 12px;
+  margin-top: 18px;
+  border: 1px solid rgba(220, 239, 231, .2);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, .38);
+}
+.screen-boot .boot-bar i {
+  background: linear-gradient(90deg, #48b29b, #f2bc63, #f07842);
+  box-shadow: 0 0 14px rgba(240, 166, 77, .63);
+}
+
+.screen-title {
+  background: radial-gradient(ellipse at 74% 75%, rgba(215, 127, 60, .18), transparent 38%),
+    linear-gradient(105deg, rgba(7, 21, 26, .36), rgba(10, 22, 27, .82) 72%, rgba(13, 23, 28, .88));
+}
+.screen-title .screen-top { align-items: center; }
+.screen-title .title-copy {
+  position: relative;
+  padding: clamp(20px, 3vw, 34px);
+  border: 1px solid rgba(134, 207, 194, .16);
+  border-radius: 28px 8px 28px 8px;
+  background: linear-gradient(138deg, rgba(12, 29, 34, .76), rgba(19, 26, 28, .37));
+  box-shadow: 0 20px 56px rgba(0, 0, 0, .2), inset 0 1px rgba(255, 255, 255, .06);
+  backdrop-filter: blur(5px);
+}
+.screen-title .title-copy h1 { color: #fff1d7; text-shadow: 0 4px 30px rgba(246, 160, 72, .28); }
+.screen-title .title-copy .tagline { color: #d7e7df; }
+.screen-title .menu .btn {
+  min-height: 58px;
+  padding: 13px 18px;
+  border: 1px solid rgba(223, 231, 214, .22);
+  border-radius: 8px 20px 8px 20px;
+  background: linear-gradient(135deg, rgba(31, 52, 55, .95), rgba(32, 37, 38, .94));
+  font-size: 15px;
+  font-weight: 850;
+  box-shadow: 0 9px 20px rgba(0, 0, 0, .23), inset 0 1px rgba(255, 255, 255, .09);
+}
+.screen-title .menu .btn-primary {
+  border-color: rgba(255, 213, 143, .68);
+  background: linear-gradient(115deg, #ed9a44, #d75d31 66%, #bd492d);
+  color: #fff8ea;
+}
+.screen-title .menu .btn-accent {
+  border-color: rgba(112, 207, 185, .5);
+  background: linear-gradient(120deg, #247f75, #1d5d61);
+}
+.screen-title .title-bottom {
+  border-color: rgba(145, 203, 191, .19);
+  border-radius: 8px 18px 8px 18px;
+  background: rgba(10, 26, 31, .7);
+  color: #d2e3dc;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .2);
+}
+.screen-title .title-bottom > span { color: #f1bd6a; font-weight: 900; }
+.title-ribbon {
+  border-color: rgba(115, 211, 188, .4);
+  background: linear-gradient(100deg, rgba(47, 148, 129, .24), rgba(24, 37, 41, .86));
+  color: #d4fff0;
+}
+.title-ribbon > i { background: #5ed0af; box-shadow: 0 0 12px rgba(94, 208, 175, .9); }
+.screen-title .menu .btn-primary { animation-duration: 1.9s; }
+.race-signal {
+  border-color: rgba(255, 225, 168, .9);
+  background: radial-gradient(circle, rgba(241, 163, 67, .66), rgba(31, 43, 45, .89) 72%);
+  box-shadow: 0 0 0 10px rgba(84, 201, 171, .12), 0 0 48px rgba(249, 175, 66, .52), inset 0 0 30px rgba(255, 224, 161, .25);
+}
+
+.turbo-shop { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .12); }
+.turbo-shop h3 { color: #ffe0a3; font-size: 16px !important; }
+.turbo-shop .shop-note { font-size: 11px; line-height: 1.45; }
+.turbo-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.turbo-card {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--turbo-color) 45%, transparent);
+  border-radius: 15px 6px 15px 6px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--turbo-color) 14%, rgba(14, 20, 21, .92)), rgba(255, 255, 255, .035));
+}
+.turbo-card.is-selected { box-shadow: inset 0 0 0 1px var(--turbo-color), 0 0 16px color-mix(in srgb, var(--turbo-color) 16%, transparent); }
+.turbo-card-heading { display: grid; grid-template-columns: 35px 1fr; gap: 8px; align-items: center; }
+.turbo-card-heading > span {
+  display: grid; width: 34px; height: 34px; place-items: center;
+  border: 1px solid rgba(255, 255, 255, .45); border-radius: 10px 4px 10px 4px;
+  background: var(--turbo-color); color: #142023; font-size: 20px; font-weight: 950;
+}
+.turbo-card-heading h4 { margin: 0; color: #fff4dc; font-size: 13px; }
+.turbo-card-heading p { margin: 2px 0 0; color: #c6d4ce; font-size: 10px; line-height: 1.35; }
+.turbo-card > small { color: #f0d7a8; font-size: 10px; line-height: 1.45; }
+.turbo-choice {
+  min-height: 42px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--turbo-color) 58%, white 10%);
+  border-radius: 7px 14px 7px 14px; background: color-mix(in srgb, var(--turbo-color) 26%, #1c2425);
+  color: #fff7e7; font-size: 11px; font-weight: 900; cursor: pointer;
+}
+.turbo-choice:hover:not(:disabled), .turbo-choice:focus-visible { filter: brightness(1.2); outline: 2px solid rgba(255, 255, 255, .65); }
+.turbo-choice:disabled { opacity: .72; cursor: default; }
+
+.car-ability {
+  margin-top: 5px !important;
+  padding: 6px 8px;
+  border-inline-start: 2px solid #63c9ad;
+  border-radius: 6px;
+  background: rgba(65, 135, 119, .13);
+  color: #cde1d9;
+  font-size: 10px !important;
+  line-height: 1.4;
+}
+.car-ability b { color: #f2cf88; }
+.hud-impacts { color: #d1d9ca; }
+.hud-impacts.is-danger { color: #ff9a7d; font-weight: 900; }
+.hud-impact-reset {
+  position: absolute;
+  z-index: 14;
+  top: 18%;
+  left: 50%;
+  max-width: min(90vw, 440px);
+  padding: 10px 16px;
+  transform: translate(-50%, -6px);
+  border: 1px solid rgba(255, 197, 132, .72);
+  border-radius: 8px 18px 8px 18px;
+  background: rgba(88, 39, 26, .9);
+  color: #fff0d8;
+  font-size: 14px;
+  font-weight: 900;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease, visibility .18s;
+}
+.hud-impact-reset.is-visible { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+
+@keyframes boot-engine-pulse { from { transform: scale(.97); filter: saturate(.92); } to { transform: scale(1.03); filter: saturate(1.24); } }
+@media (max-width: 560px) {
+  .screen-boot .boot-card { padding: 26px 22px; }
+  .screen-title .menu .btn { min-height: 52px; padding: 11px 14px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-boot .boot-card .boot-icon { animation: none; }
+}
