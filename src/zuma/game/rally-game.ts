@@ -761,7 +761,7 @@ export class RallyGame {
       flame.scale.set(0.65 + nitro * 0.4, 0.55 + nitro * (0.9 + Math.sin(this.time * 38) * 0.12), 0.65 + nitro * 0.4)
       ;(flame.material as THREE.MeshBasicMaterial).opacity = nitro * 0.85
     }
-    const dustLevel = THREE.MathUtils.clamp(Math.abs(speed) / CONFIG.race.maxSpeed * 0.24 + Math.min(0.16, Math.abs(lateral) * 0.018) + (drifting ? 0.16 : 0), 0, 0.52)
+    void lateral; void drifting
   }
 
   private buildRivals(): void {

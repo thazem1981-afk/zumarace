@@ -14,13 +14,22 @@ import { RallyGame, type RallyMode } from './game/rally-game'
 import { TouchControls } from './ui/touch'
 import { RallyUi } from './ui/rally-ui'
 
+import saqrModel from '../assets/saqr-rally.glb.asset.json'
+import zumaModel from '../assets/zuma-rs.glb.asset.json'
+import pickupModel from '../assets/dune-pickup.glb.asset.json'
+import type { DriverId } from './game/characters'
+import { lookFor, type CarLook } from './game/customization'
+
 const CAR_MODEL_URLS: Partial<Record<CarId, string>> = {
-  'dune-runner': new URL('../assets/models/saqr-rally.glb', import.meta.url).href,
-  'zuma-rs': new URL('../assets/models/zuma-rs.glb', import.meta.url).href,
-  'dune-pickup': new URL('../assets/models/dune-pickup.glb', import.meta.url).href,
+  'dune-runner': saqrModel.url,
+  'zuma-rs': zumaModel.url,
+  'dune-pickup': pickupModel.url,
 }
 
-async function boot(): Promise<void> {
+let booted = false
+export async function boot(): Promise<void> {
+  if (booted) return
+  booted = true
   const canvas = document.querySelector<HTMLCanvasElement>('#game')!
   const firstRun = safeGet(SAVE_KEY) === null
   const save = new SaveStore()
@@ -35,7 +44,10 @@ async function boot(): Promise<void> {
     input.sensitivity = data.sensitivity
     input.invertY = data.invertY
     audio.setVolumes(data.musicVolume, data.sfxVolume, data.muted)
-    if (game) game.reducedMotion = data.reducedMotion
+    if (game) {
+      game.reducedMotion = data.reducedMotion
+      game.coDriverVoice = data.coDriverVoice
+    }
   }
   let gameRenderer: import('./engine/renderer').Renderer | undefined
 
@@ -69,7 +81,21 @@ async function boot(): Promise<void> {
     quit: () => {
       game?.toTitle()
       audio.stopMusic()
+      game?.preview(save.data.raceProgress.unlockedStage)
       ui.showTitle()
+    },
+    setDriver: (id: DriverId) => {
+      save.update({ driver: id })
+      game?.setDriver(id)
+    },
+    setLook: (id: CarId, patch: Partial<CarLook>) => {
+      const garage = { ...save.data.garage, [id]: { ...lookFor(save.data.garage, id), ...patch } }
+      save.update({ garage })
+      game?.setGarage(garage)
+    },
+    cycleCamera: () => {
+      if (!game) return
+      save.update({ cameraMode: game.cycleCamera() })
     },
     buyCar: (id: CarId) => {
       const result = buyCar(save.data.raceProgress, id)
@@ -146,17 +172,11 @@ async function boot(): Promise<void> {
       pause: updatePause,
     })
     game.reducedMotion = save.data.reducedMotion
-
-    if (import.meta.env.DEV) {
-      try {
-        const [{ registerGameTuning }, { tuning }] = await Promise.all([
-          import('../scripts/manus-tuning/adapter.js'), import('./game/tuning'),
-        ])
-        await registerGameTuning(tuning)
-      } catch (error) {
-        console.warn('Preview tuning is unavailable; gameplay remains usable.', error)
-      }
-    }
+    game.coDriverVoice = save.data.coDriverVoice
+    game.cameraMode = save.data.cameraMode
+    game.setDriver(save.data.driver)
+    game.setGarage(save.data.garage)
+    game.preview(save.data.raceProgress.unlockedStage)
 
     const g = game
     loop = new GameLoop({
@@ -172,6 +192,7 @@ async function boot(): Promise<void> {
           return
         }
         g.step(dt)
+        if (save.data.cameraMode !== g.cameraMode) save.update({ cameraMode: g.cameraMode })
       },
       render: (alpha, frameSeconds) => {
         ui.frame(frameSeconds)
@@ -192,6 +213,7 @@ async function boot(): Promise<void> {
     ui.setBootProgress(1)
     window.setTimeout(() => ui.showTitle(), 160)
     ;(window as unknown as { __game: unknown }).__game = { game: g, ui, input, save }
+    document.querySelector('#game')?.setAttribute('data-scene-ready', 'true')
   } catch (error) {
     console.error('Rally boot failed', error)
     ui.showBootError()
@@ -202,8 +224,3 @@ function safeGet(key: string): string | null {
   try { return localStorage.getItem(key) } catch { return null }
 }
 
-boot().catch(error => {
-  console.error(error)
-  const root = document.getElementById('ui')
-  if (root) root.innerHTML = '<div class="fatal">تعذّر تشغيل اللعبة. أعد تحميل الصفحة للمحاولة مرة أخرى.</div>'
-})
