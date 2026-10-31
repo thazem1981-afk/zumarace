@@ -66,3 +66,4 @@ body, #ui { color: #fff6e8 }
 .codriver small { display: block; font-size: 10px; color: #8fd3c8 }
 .codriver b { font-size: clamp(16px, 2.2vw, 22px) }
 @media (max-width: 760px) { .standings { display: none } .hud-conditions { top: 100px; font-size: 10px } .codriver { top: 128px } }
+@media (max-height: 900px) { .screen-title .title-bottom { display: none } }
