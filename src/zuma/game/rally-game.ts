@@ -578,7 +578,15 @@ export class RallyGame {
       target.copy(sample.position).addScaledVector(sample.tangent, far ? 9 : 5).add(new THREE.Vector3(0, 1.7, 0))
     } else if (mode === 'hood' || mode === 'bumper') {
       const hood = mode === 'hood'
-      desired.copy(car).addScaledVector(h, hood ? 1.25 : 2.5).add(new THREE.Vector3(0, hood ? 1.45 : 0.72, 0))
+      // Hood cam sits just above the body's highest point so it never clips into imported models.
+      if (this.body.userData.topY === undefined) {
+        const box = new THREE.Box3().setFromObject(this.body)
+        this.body.userData.topY = box.max.y - this.vehicle.position.y
+        this.body.userData.frontZ = Math.max(1.6, (box.max.z - box.min.z) / 2)
+      }
+      const topY = this.body.userData.topY as number
+      const frontZ = this.body.userData.frontZ as number
+      desired.copy(car).addScaledVector(h, hood ? 0.4 : frontZ + 0.3).add(new THREE.Vector3(0, hood ? topY + 0.18 : 0.72, 0))
       target.copy(car).addScaledVector(h, 30).add(new THREE.Vector3(0, hood ? 1.1 : 0.9, 0))
       follow = 60
       fovBoost = 6

@@ -102,7 +102,7 @@ export class Atmosphere {
     this.time = 0
     const w = conditions.weather
     this.precip.visible = w === 'rain' || w === 'snow' || w === 'sandstorm'
-    this.precipMat.color.set(w === 'sandstorm' ? conditions.biome.dust : 0xffffff)
+    this.precipMat.color.set(w === 'sandstorm' ? conditions.biome.dust : w === 'rain' ? 0xaebfd0 : 0xffffff)
     this.precipMat.size = w === 'rain' ? 0.09 : w === 'snow' ? 0.22 : 0.16
     this.precipMat.opacity = w === 'rain' ? 0.55 : w === 'snow' ? 0.9 : 0.5
     this.apply()
