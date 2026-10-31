@@ -13,7 +13,7 @@
 @keyframes zr-glow { 50% { color: #ffe0a8; text-shadow: 0 0 18px rgba(243, 166, 71, 0.6) } }
 .title-side { width: min(340px, 34vw); display: flex; flex-direction: column; gap: 12px; animation: zr-in 0.7s ease both 0.15s }
 @keyframes zr-in { from { opacity: 0; transform: translateX(-24px) } }
-.next-stage, .crew { border: 1px solid rgba(255, 239, 210, 0.17); border-radius: 18px; background: rgba(18, 20, 24, 0.7); backdrop-filter: blur(14px); padding: 14px 16px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3) }
+.next-stage, .crew { color: #fff6e8; border: 1px solid rgba(255, 239, 210, 0.17); border-radius: 18px; background: rgba(18, 20, 24, 0.7); backdrop-filter: blur(14px); padding: 14px 16px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3) }
 .next-stage small, .crew small { display: block; font-size: 11px; color: #c8c1b5; letter-spacing: 0.06em }
 .next-stage strong { display: block; font-size: 22px; margin: 4px 0 10px }
 .cond-chips { display: flex; flex-wrap: wrap; gap: 6px }
@@ -52,16 +52,16 @@
 
 /* HUD */
 .hud-camera { pointer-events: auto; border: 1px solid rgba(255, 239, 210, 0.2); border-radius: 12px; background: rgba(20, 22, 26, 0.7); padding: 8px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; margin-inline-end: 6px }
-.hud-conditions { position: absolute; top: 74px; left: 50%; transform: translateX(-50%); font-size: 12px; padding: 4px 12px; border-radius: 99px; background: rgba(18, 20, 24, 0.55); color: #ffe2a5; white-space: nowrap }
+.hud-conditions { position: absolute; top: 118px; left: 50%; transform: translateX(-50%); font-size: 12px; padding: 4px 12px; border-radius: 99px; background: rgba(18, 20, 24, 0.55); color: #ffe2a5; white-space: nowrap }
 .standings { position: absolute; top: 110px; right: 18px; margin: 0; padding: 8px; list-style: none; border-radius: 14px; background: rgba(18, 20, 24, 0.6); backdrop-filter: blur(8px); font-size: 12px; min-width: 150px }
 .standings li { display: flex; gap: 8px; padding: 3px 6px; border-radius: 8px; color: #e8e1d5 }
 .standings li b { width: 16px; color: #c8c1b5 }
 .standings li.is-player { background: rgba(243, 166, 71, 0.85); color: #1b1712 }
 .standings li.is-player b { color: #1b1712 }
-.codriver { position: absolute; top: 108px; left: 50%; transform: translate(-50%, -10px); display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 10px; border-radius: 16px; background: rgba(14, 18, 24, 0.82); border: 1px solid rgba(143, 211, 200, 0.4); opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none }
+.codriver { position: absolute; top: 152px; left: 50%; transform: translate(-50%, -10px); display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 10px; border-radius: 16px; background: rgba(14, 18, 24, 0.82); border: 1px solid rgba(143, 211, 200, 0.4); opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none }
 .codriver.is-visible { opacity: 1; transform: translate(-50%, 0) }
 .codriver.is-urgent { border-color: #df7754; box-shadow: 0 0 24px rgba(223, 119, 84, 0.45) }
 .codriver img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover }
 .codriver small { display: block; font-size: 10px; color: #8fd3c8 }
 .codriver b { font-size: clamp(16px, 2.2vw, 22px) }
-@media (max-width: 760px) { .standings { display: none } .hud-conditions { top: 64px; font-size: 10px } .codriver { top: 92px } }
+@media (max-width: 760px) { .standings { display: none } .hud-conditions { top: 100px; font-size: 10px } .codriver { top: 128px } }
