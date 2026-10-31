@@ -6,6 +6,14 @@ import { CAMPAIGN_CARS, CAR_ABILITIES, finishStage, stageByNumber, TURBO_TYPES, 
 import { CONFIG } from './config'
 import { RallyTrack, type TrackHazard } from './rally-track'
 import { tuning } from './tuning'
+import { Atmosphere } from './atmosphere'
+import { conditionsForStage, SURFACE_DRAG, TIME_LABEL, WEATHER_GRIP, WEATHER_LABEL, type StageConditions } from './environment'
+import { buildRealisticCar } from './vehicle'
+import { DEFAULT_LOOK, lookFor, type CarLook, type Garage } from './customization'
+import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './characters'
+import { ParticlePool, SkidMarks } from './vfx'
+import { describeNote } from './pace-notes'
+import type { CameraMode } from '../engine/save'
 
 export type RallyMode = 'attract' | 'countdown' | 'playing' | 'paused' | 'ended'
 export type RallyResult = {
@@ -36,6 +44,11 @@ export type RallyHud = {
   drifting: boolean
   countdown: number
   starting: boolean
+  coDriver: string
+  coDriverUrgent: boolean
+  conditions: string
+  camera: CameraMode
+  standings: { name: string; player: boolean }[]
 }
 export type RallyHooks = {
   result(result: RallyResult): void
@@ -56,6 +69,7 @@ type Rival = {
   randomState: number
   swerveVelocity: number
   ability: CarAbilityId
+  name: string
 }
 type CarModelSources = Partial<Record<CarId, THREE.Object3D>>
 
@@ -108,6 +122,26 @@ export class RallyGame {
   private startSignalTime = 0
   private pausedMode: 'countdown' | 'playing' = 'playing'
   private raceRunNumber = 0
+  cameraMode: CameraMode = 'chase'
+  coDriverVoice = true
+  private garage: Garage = {}
+  private driver: Driver = driverById('salem')
+  private readonly atmosphere: Atmosphere
+  private conditions: StageConditions = conditionsForStage(1)
+  private readonly particles = new ParticlePool(1600)
+  private readonly skids = new SkidMarks(1000)
+  private readonly headlight = new THREE.SpotLight(0xfff1d0, 0, 90, 0.55, 0.45, 1.2)
+  private readonly heading = new THREE.Vector3(0, 0, 1)
+  private coDriverText = ''
+  private coDriverTimer = 0
+  private coDriverUrgent = false
+  private readonly announced = new Set<string>()
+  private lastLapAnnounced = 0
+  private lastSkidDistance = 0
+  private braking = false
+  private readonly tmpV = new THREE.Vector3()
+  private readonly tmpV2 = new THREE.Vector3()
+  private readonly tmpC = new THREE.Color()
 
   constructor(
     private readonly renderer: Renderer,
@@ -119,20 +153,13 @@ export class RallyGame {
   ) {
     this.progress = progress
     this.car = this.carFor(progress.selectedCar)
-    this.scene.background = new THREE.Color(0xe7bd80)
-    this.scene.fog = new THREE.Fog(0xe7bd80, 120, 460)
-    const ambient = new THREE.HemisphereLight(0xfff1d2, 0x70543b, 2.1)
-    this.scene.add(ambient)
-    const sun = new THREE.DirectionalLight(0xffdfa9, 3.4)
-    sun.position.set(-80, 130, 70)
-    sun.castShadow = true
-    sun.shadow.mapSize.set(renderer.shadowMapSize, renderer.shadowMapSize)
-    sun.shadow.camera.left = -150
-    sun.shadow.camera.right = 150
-    sun.shadow.camera.top = 150
-    sun.shadow.camera.bottom = -150
-    sun.shadow.bias = -0.0004
-    this.scene.add(sun)
+    this.camera.far = 3200
+    this.camera.updateProjectionMatrix()
+    this.atmosphere = new Atmosphere(this.scene, renderer.shadowMapSize)
+    this.scene.add(this.particles.points, this.skids.mesh)
+    this.headlight.position.set(0, 1.1, 2.2)
+    this.headlight.target.position.set(0, 0, 22)
+    this.vehicle.add(this.headlight, this.headlight.target)
 
     this.body = this.createVehicle(this.car, this.car.color)
     this.vehicle.add(this.body)
@@ -147,6 +174,7 @@ export class RallyGame {
 
     this.track = new RallyTrack(1, CONFIG.race.trackWidth)
     this.scene.add(this.track.group)
+    this.applyConditions(1)
     this.buildRivals()
     this.resetCarPose()
   }
@@ -182,6 +210,11 @@ export class RallyGame {
     this.impacts = 0
     this.impactResetNoticeSeconds = 0
     this.collidedHazards.clear()
+    this.applyConditions(stageNumber)
+    this.announced.clear()
+    this.lastLapAnnounced = 1
+    this.coDriverText = ''
+    this.coDriverTimer = 0
     this.raceRunNumber += 1
     for (const [i, rival] of this.rivals.entries()) {
       const row = Math.floor(i / 2)
@@ -253,6 +286,45 @@ export class RallyGame {
     this.vehicle.add(this.body)
   }
 
+  /** Apply garage cosmetics and rebuild the player's car. */
+  setGarage(garage: Garage): void {
+    this.garage = garage
+    this.setProgress(this.progress)
+  }
+
+  setDriver(id: DriverId): void { this.driver = driverById(id) }
+
+  /** Show a stage's landscape and conditions behind the title screen. */
+  preview(stageNumber: number): void {
+    if (this.mode !== 'attract') return
+    if (this.track.stageNumber !== stageNumber) this.replaceTrack(stageNumber)
+    this.stageNumber = stageNumber
+    this.trackDistance = 0
+    this.laneOffset = 0
+    this.applyConditions(stageNumber)
+    this.resetCarPose()
+  }
+
+  get stageConditions(): StageConditions { return this.conditions }
+
+  cycleCamera(): CameraMode {
+    const modes: CameraMode[] = ['chase', 'far', 'hood', 'bumper', 'tv']
+    this.cameraMode = modes[(modes.indexOf(this.cameraMode) + 1) % modes.length]
+    this.camera.userData.ready = false
+    return this.cameraMode
+  }
+
+  private applyConditions(stageNumber: number): void {
+    this.conditions = conditionsForStage(stageNumber)
+    this.atmosphere.setConditions(this.conditions)
+    this.track.setWetness(this.atmosphere.wetness)
+    const surface = this.conditions.biome.surface
+    const mark = surface === 'tarmac' ? 0x111214 : new THREE.Color(this.conditions.biome.road).multiplyScalar(0.55).getHex()
+    this.skids.setColor(mark, surface === 'tarmac' ? 0.5 : 0.38)
+    this.skids.clear()
+    this.particles.clear()
+  }
+
   step(dt: number): void {
     if (this.mode === 'countdown') {
       this.impactResetNoticeSeconds = Math.max(0, this.impactResetNoticeSeconds - dt)
@@ -271,6 +343,7 @@ export class RallyGame {
       return
     }
     if (this.mode !== 'playing') return
+    this.coDriverTimer = Math.max(0, this.coDriverTimer - dt)
     this.startSignalTime = Math.max(0, this.startSignalTime - dt)
     this.elapsed += dt
     this.crashCooldown = Math.max(0, this.crashCooldown - dt)
@@ -278,6 +351,7 @@ export class RallyGame {
     const manualThrottle = Math.max(0, this.input.move.y, this.input.held('throttle') ? 1 : 0)
     const reverse = Math.max(0, -this.input.move.y)
     const brake = this.input.held('brake') || reverse > 0
+    this.braking = brake && this.speed > 3
     const turboType = TURBO_TYPES.find(item => item.id === this.progress.selectedTurbo)
     const turboHeld = this.input.held('turbo') && !!turboType && this.nitro > 0.01 && !this.crashTimer
     const drift = (this.input.held('drift') || brake) && this.speed > 7
@@ -285,7 +359,7 @@ export class RallyGame {
     this.nitroEffect = turboHeld ? Math.min(1, this.nitroEffect + dt * 3.8) : Math.max(0, this.nitroEffect - dt * 2.6)
 
     const ability = CAR_ABILITIES[this.car.ability]
-    const engineScale = (0.82 + this.car.acceleration * 0.035 + this.progress.engineUpgrade * 0.035) * ability.acceleration
+    const engineScale = (0.82 + this.car.acceleration * 0.035 + this.progress.engineUpgrade * 0.035) * ability.acceleration * this.driver.acceleration
     const speedScale = (0.82 + this.car.topSpeed * 0.036 + this.progress.engineUpgrade * 0.035) * ability.topSpeed
     const maxSpeed = CONFIG.race.maxSpeed * speedScale
     const acceleration = CONFIG.race.acceleration * engineScale
@@ -309,17 +383,21 @@ export class RallyGame {
       this.speed = Math.min(maxSpeed * turboType.topSpeed, this.speed + CONFIG.race.nitroForce * turboType.power * ability.turboPower * dt)
       this.nitro = Math.max(0, this.nitro - dt * turboType.drain)
     } else if (turboType) {
-      this.nitro = Math.min(1, this.nitro + dt * turboType.recharge * ability.turboRecharge)
+      this.nitro = Math.min(1, this.nitro + dt * turboType.recharge * ability.turboRecharge * this.driver.turboRecharge)
     } else {
       this.nitro = 0
     }
 
-    const tireScale = (0.8 + this.car.grip * 0.04 + this.progress.tireUpgrade * 0.075) * ability.grip
+    const weather = this.conditions.weather
+    const slippery = weather === 'rain' || weather === 'snow'
+    const weatherGrip = 1 - (1 - WEATHER_GRIP[weather]) * this.atmosphere.intensity
+    const tireScale = (0.8 + this.car.grip * 0.04 + this.progress.tireUpgrade * 0.075) * ability.grip * weatherGrip * (slippery ? this.driver.wetGrip : 1)
     const steer = -this.input.move.x * this.input.sensitivity
-    const lateralAccel = CONFIG.race.steeringForce * tireScale * ability.steering * (drift ? 1.24 * ability.drift : 1) * Math.min(1.4, 0.58 + Math.abs(this.speed) / 23)
+    const lateralAccel = CONFIG.race.steeringForce * tireScale * ability.steering * this.driver.steering * (drift ? 1.24 * ability.drift : 1) * Math.min(1.4, 0.58 + Math.abs(this.speed) / 23)
     this.previousPlayerLane = this.laneOffset
     this.lateralVelocity += steer * lateralAccel * dt
-    this.lateralVelocity *= Math.exp(-(drift ? 1.5 : 3.25) * dt)
+    // Low grip means the car keeps sliding sideways for longer.
+    this.lateralVelocity *= Math.exp(-(drift ? 1.5 : 3.25) * Math.min(1, weatherGrip + 0.1) * dt)
     this.laneOffset += this.lateralVelocity * dt
     this.steerInput = steer
     if (Math.abs(steer) < 0.03 && !drift) this.laneOffset *= Math.exp(-0.16 * dt)
@@ -329,12 +407,13 @@ export class RallyGame {
       this.laneOffset = THREE.MathUtils.clamp(this.laneOffset, -this.track.width * 0.5 + 1.25, this.track.width * 0.5 - 1.25)
       this.lateralVelocity = -Math.sign(this.laneOffset) * 3.5
     }
-    if (Math.abs(this.laneOffset) > this.track.width * 0.35) this.speed = Math.max(0, this.speed - 5.2 * ability.offroadDrag * dt)
+    if (Math.abs(this.laneOffset) > this.track.width * 0.35) this.speed = Math.max(0, this.speed - 5.2 * ability.offroadDrag * SURFACE_DRAG[this.conditions.biome.surface] * dt)
     this.longitudinalAccel = (this.speed - previousSpeed) / Math.max(0.001, dt)
 
     if (this.crashTimer <= 0) this.trackDistance = Math.max(0, this.trackDistance + this.speed * dt)
     this.updateRivals(dt)
     if (this.mode !== 'playing') return
+    this.updateCoDriver()
     this.checkHazards()
     this.checkRivalCollision()
     if (this.elapsed >= this.currentStage.timeLimitSeconds) {
@@ -351,6 +430,11 @@ export class RallyGame {
 
   render(_alpha: number, frameSeconds: number): void {
     this.time += frameSeconds
+    if (this.mode === 'playing' || this.mode === 'countdown') {
+      if (this.input.consume('camera')) this.cycleCamera()
+    }
+    this.atmosphere.update(frameSeconds, this.vehicle.position, this.mode === 'playing', this.reducedMotion)
+    this.track.setWetness(this.atmosphere.wetness)
     const targetFov = CONFIG.camera.fov + (this.reducedMotion ? 0 : this.nitroEffect * 4.5)
     if (Math.abs(this.camera.fov - targetFov) > 0.01) {
       this.camera.fov = targetFov
@@ -361,6 +445,7 @@ export class RallyGame {
     const slipAngle = THREE.MathUtils.clamp(Math.atan2(this.lateralVelocity, Math.max(4, Math.abs(this.speed))), -0.28, 0.28)
     const heading = sample.tangent.clone().applyAxisAngle(UP, slipAngle)
     this.vehicle.quaternion.setFromUnitVectors(FORWARD, heading)
+    this.heading.copy(heading)
     if (this.crashTimer > 0) {
       this.body.position.y = 0
       this.body.rotation.set(0, this.bodyYaw, this.rollAngle())
@@ -385,26 +470,16 @@ export class RallyGame {
       this.placeCar(rival.root, this.track.sample(rival.distance, rival.lane))
       this.updateVehicleEffects(rival.body, rival.speed, 0, 0, false, frameSeconds)
     }
+    this.updateLights()
+    this.updateParticles(frameSeconds)
     if (this.mode === 'attract' || this.mode === 'ended') {
-      const orbit = this.time * 0.065
-      const center = this.track.sample(0).position
-      this.camera.position.set(center.x + Math.sin(orbit) * 28, 13 + Math.sin(this.time * 0.18) * 1.1, center.z + Math.cos(orbit) * 35)
-      this.camera.lookAt(center.x + sample.tangent.x * 6, 2.4, center.z + sample.tangent.z * 6)
+      const orbit = this.time * 0.09
+      const center = this.vehicle.position
+      const radius = this.mode === 'attract' ? 10.5 : 14
+      this.camera.position.set(center.x + Math.sin(orbit) * radius, 2.6 + Math.sin(this.time * 0.18) * 0.6, center.z + Math.cos(orbit) * radius)
+      this.camera.lookAt(center.x, 1.1, center.z)
     } else {
-      const back = sample.position.clone().addScaledVector(sample.tangent, -(CONFIG.camera.distance + 4))
-      const desired = back.add(new THREE.Vector3(0, CONFIG.camera.height + 3, 0))
-      if (!this.camera.userData.ready) {
-        this.camera.position.copy(desired)
-        this.camera.userData.ready = true
-      } else this.camera.position.lerp(desired, 1 - Math.exp(-CONFIG.camera.follow * frameSeconds))
-      const target = sample.position.clone().addScaledVector(sample.tangent, 5).add(new THREE.Vector3(0, 1.7, 0))
-      this.camera.lookAt(target)
-      if (!this.reducedMotion && this.mode === 'playing') this.camera.rotateZ(this.steerInput * 0.014 + (this.driftActive ? Math.sign(this.lateralVelocity) * 0.01 : 0))
-      if (!this.reducedMotion && this.crashTimer > 0) {
-        const shake = this.crashTimer * 0.28
-        this.camera.position.x += Math.sin(this.time * 42) * shake
-        this.camera.position.y += Math.cos(this.time * 37) * shake * 0.5
-      }
+      this.updateCamera(sample, frameSeconds)
     }
     this.renderer.render(this.scene, this.camera)
   }
@@ -429,7 +504,165 @@ export class RallyGame {
       drifting: this.driftActive,
       countdown: this.mode === 'countdown' ? Math.max(1, Math.ceil(this.countdownRemaining)) : 0,
       starting: this.startSignalTime > 0,
+      coDriver: this.coDriverTimer > 0 ? this.coDriverText : '',
+      coDriverUrgent: this.coDriverUrgent,
+      conditions: `${this.conditions.biome.label} · ${WEATHER_LABEL[this.conditions.weather]} · ${TIME_LABEL[this.timeNow()]}`,
+      camera: this.cameraMode,
+      standings: this.standings(),
     }
+  }
+
+  private timeNow(): 'dawn' | 'day' | 'sunset' | 'night' {
+    const t = this.atmosphere.sunT
+    if (t < 0.12 && t > -0.02) return 'dawn'
+    if (t > 1.05 || t <= -0.02) return 'night'
+    if (t > 0.8) return 'sunset'
+    return 'day'
+  }
+
+  private standings(): { name: string; player: boolean }[] {
+    const all = [{ name: this.driver.name, player: true, d: this.trackDistance }, ...this.rivals.map(r => ({ name: r.name, player: false, d: r.distance }))]
+    return all.sort((a, b) => b.d - a.d).map(({ name, player }) => ({ name, player }))
+  }
+
+  private say(text: string, spoken: string, urgent = false): void {
+    this.coDriverText = text
+    this.coDriverTimer = 3.2
+    this.coDriverUrgent = urgent
+    if (!this.coDriverVoice || typeof speechSynthesis === 'undefined') return
+    try {
+      speechSynthesis.cancel()
+      const u = new SpeechSynthesisUtterance(spoken)
+      u.lang = 'ar-SA'
+      u.rate = 1.2
+      u.volume = 0.9
+      speechSynthesis.speak(u)
+    } catch { /* Voice is optional; the on-screen note still shows. */ }
+  }
+
+  /** Read the next corner 50–170 m ahead, once per lap. */
+  private updateCoDriver(): void {
+    const lap = Math.floor(this.trackDistance / this.track.length) + 1
+    if (lap > this.lastLapAnnounced && lap <= this.stageLaps) {
+      this.lastLapAnnounced = lap
+      this.say(lap === this.stageLaps ? 'اللفة الأخيرة! ادفع بكل قوتك' : `اللفة ${lap}`, lap === this.stageLaps ? 'اللفة الأخيرة' : `اللفة ${lap}`)
+      return
+    }
+    if (this.coDriverTimer > 1.4) return
+    const L = this.track.length
+    const here = ((this.trackDistance % L) + L) % L
+    for (let i = 0; i < this.track.paceNotes.length; i += 1) {
+      const note = this.track.paceNotes[i]
+      const ahead = (note.distance - here + L) % L
+      const key = `${lap}:${i}`
+      if (ahead < 50 || ahead > 170 || this.announced.has(key)) continue
+      this.announced.add(key)
+      const dir = note.direction === 'left' ? 'يسار' : 'يمين'
+      this.say(describeNote(note, ahead), `${dir} ${note.grade}${note.grade <= 2 ? '، اكبح' : ''}`, note.grade <= 2)
+      return
+    }
+  }
+
+  private updateCamera(sample: { position: THREE.Vector3; tangent: THREE.Vector3; side: THREE.Vector3 }, frameSeconds: number): void {
+    const mode = this.cameraMode
+    const car = this.vehicle.position
+    const h = this.heading
+    const snap = !this.camera.userData.ready
+    const target = this.tmpV2
+    const desired = this.tmpV
+    let follow = CONFIG.camera.follow
+    let fovBoost = 0
+    this.body.visible = true
+    if (mode === 'chase' || mode === 'far') {
+      const far = mode === 'far'
+      desired.copy(sample.position).addScaledVector(sample.tangent, -(CONFIG.camera.distance + (far ? 11 : 4))).add(new THREE.Vector3(0, CONFIG.camera.height + (far ? 6 : 3), 0))
+      target.copy(sample.position).addScaledVector(sample.tangent, far ? 9 : 5).add(new THREE.Vector3(0, 1.7, 0))
+    } else if (mode === 'hood' || mode === 'bumper') {
+      const hood = mode === 'hood'
+      desired.copy(car).addScaledVector(h, hood ? 1.25 : 2.5).add(new THREE.Vector3(0, hood ? 1.45 : 0.72, 0))
+      target.copy(car).addScaledVector(h, 30).add(new THREE.Vector3(0, hood ? 1.1 : 0.9, 0))
+      follow = 60
+      fovBoost = 6
+    } else {
+      // Trackside TV cameras: jump between fixed posts as the car passes them.
+      const spacing = 140
+      const post = Math.floor((this.trackDistance + spacing * 0.5) / spacing) * spacing
+      const side = Math.floor(post / spacing) % 2 ? 1 : -1
+      const p = this.track.sample(post + 25, side * (this.track.width / 2 + 10))
+      desired.copy(p.position).setY(5.5)
+      target.copy(car).setY(1)
+      follow = 1000
+    }
+    if (snap) {
+      this.camera.position.copy(desired)
+      this.camera.userData.ready = true
+    } else this.camera.position.lerp(desired, 1 - Math.exp(-follow * frameSeconds))
+    this.camera.lookAt(target)
+    const fov = CONFIG.camera.fov + fovBoost + (this.reducedMotion ? 0 : this.nitroEffect * 4.5) + (mode === 'tv' ? -18 : 0)
+    if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix() }
+    if (!this.reducedMotion && this.mode === 'playing' && mode !== 'tv') {
+      this.camera.rotateZ(this.steerInput * 0.014 + (this.driftActive ? Math.sign(this.lateralVelocity) * 0.01 : 0))
+      // Loose surfaces shake the cockpit views a little with speed.
+      const loose = this.conditions.biome.surface !== 'tarmac'
+      const rumble = (mode === 'hood' || mode === 'bumper' ? 0.012 : 0.004) * (loose ? 1 : 0.4) * Math.min(1, Math.abs(this.speed) / 30)
+      this.camera.position.y += Math.sin(this.time * 31) * rumble
+      this.camera.position.x += Math.cos(this.time * 27) * rumble
+    }
+    if (!this.reducedMotion && this.crashTimer > 0) {
+      const shake = this.crashTimer * 0.28
+      this.camera.position.x += Math.sin(this.time * 42) * shake
+      this.camera.position.y += Math.cos(this.time * 37) * shake * 0.5
+    }
+  }
+
+  private updateLights(): void {
+    const dark = this.atmosphere.darkness
+    const gloom = this.conditions.weather === 'clear' ? 0 : 0.35
+    const lightsOn = Math.max(dark, gloom * 0.6)
+    this.headlight.intensity = lightsOn * 260
+    this.headlight.visible = lightsOn > 0.02
+    const apply = (body: THREE.Group, brake: boolean) => {
+      const tail = body.userData.tailLamp as THREE.MeshStandardMaterial | undefined
+      if (tail) tail.emissiveIntensity = (brake ? 2.6 : 0.35) + lightsOn * 1.2
+    }
+    apply(this.body, this.braking && this.mode === 'playing')
+    for (const r of this.rivals) apply(r.body, false)
+  }
+
+  private updateParticles(dt: number): void {
+    const biome = this.conditions.biome
+    const wet = this.atmosphere.wetness > 0.4
+    const color = this.tmpC.set(wet && biome.surface === 'tarmac' ? 0xc9d3dc : wet ? new THREE.Color(biome.dust).multiplyScalar(0.7).getHex() : biome.dust)
+    const loose = biome.surface !== 'tarmac'
+    const emitFor = (pos: THREE.Vector3, fwd: THREE.Vector3, speed: number, slide: number, rate: number) => {
+      const s = Math.abs(speed)
+      if (s < 4 || (!loose && !wet && slide < 1.5)) return
+      const n = rate * (s / CONFIG.race.maxSpeed) * (loose ? 1 : 0.5) * (this.reducedMotion ? 0.4 : 1) + slide * 0.12
+      let count = Math.floor(n)
+      if (Math.random() < n - count) count += 1
+      const side = new THREE.Vector3(fwd.z, 0, -fwd.x)
+      for (let i = 0; i < count; i += 1) {
+        const wheel = Math.random() < 0.5 ? -0.85 : 0.85
+        const at = pos.clone().addScaledVector(fwd, -1.6).addScaledVector(side, wheel).setY(0.25)
+        const vel = fwd.clone().multiplyScalar(-s * 0.18).add(new THREE.Vector3((Math.random() - 0.5) * 3, 1.2 + Math.random() * 2.2, (Math.random() - 0.5) * 3)).addScaledVector(side, wheel * 1.2)
+        this.particles.emit(at, vel, color, 0.9 + Math.random() * 1.1, (loose ? 1.4 : 0.9) + Math.random(), wet ? 0.45 : 0.55)
+      }
+    }
+    if (this.mode === 'playing') {
+      emitFor(this.vehicle.position, this.heading, this.speed, Math.abs(this.lateralVelocity) + (this.driftActive ? 3 : 0), 4)
+      for (const r of this.rivals) {
+        if (r.root.position.distanceToSquared(this.vehicle.position) > 90 * 90) continue
+        emitFor(r.root.position, this.tmpV.set(0, 0, 1).applyQuaternion(r.root.quaternion), r.speed, 0, 1.6)
+      }
+      // Skid marks while sliding or braking hard.
+      if ((this.driftActive || (this.braking && this.speed > 12) || Math.abs(this.lateralVelocity) > 3.5) && this.trackDistance - this.lastSkidDistance > 0.7) {
+        this.lastSkidDistance = this.trackDistance
+        const side = new THREE.Vector3(this.heading.z, 0, -this.heading.x)
+        const yaw = Math.atan2(this.heading.x, this.heading.z)
+        for (const w of [-0.8, 0.8]) this.skids.add(this.vehicle.position.clone().addScaledVector(this.heading, -1.3).addScaledVector(side, w), yaw)
+      }
+    }
+    this.particles.update(dt, wet ? -6 : -2.2)
   }
 
   /** Useful for the in-project smoke test: it exercises the same crash/rollover transition as a collision. */
@@ -453,7 +686,8 @@ export class RallyGame {
     materials.forEach(material => material.dispose())
   }
 
-  private createVehicle(car: CampaignCar, color: string): THREE.Group {
+  private createVehicle(car: CampaignCar, color: string, lookOverride?: CarLook): THREE.Group {
+    const look = lookOverride ?? lookFor(this.garage, car.id)
     const wrapper = new THREE.Group()
     const singleSource = (this.modelSources as THREE.Object3D).isObject3D
     const sources: CarModelSources = singleSource
@@ -461,10 +695,12 @@ export class RallyGame {
       : this.modelSources as CarModelSources
     const dedicatedSource = sources[car.id]
     if (!dedicatedSource && car.id !== 'dune-runner') {
-      const model = this.createProceduralVehicle(car)
+      const model = buildRealisticCar(lookOverride ? car : { ...car, color }, look)
       wrapper.userData.procedural = true
       wrapper.userData.wheels = model.userData.wheels
       wrapper.userData.frontAxles = model.userData.frontAxles
+      wrapper.userData.wheelRadius = model.userData.wheelRadius
+      wrapper.userData.tailLamp = model.userData.tailLamp
       wrapper.add(model)
       this.addVehicleEffects(wrapper)
       return wrapper
@@ -494,104 +730,10 @@ export class RallyGame {
       -(bounds.min.z + bounds.max.z) * 0.5 * scale,
     )
     wrapper.add(model)
-    if (!dedicatedSource || car.id === 'dune-runner') tintVehicle(wrapper, color)
+    if (look.paint) tintVehicle(wrapper, look.paint)
+    else if (!dedicatedSource || car.id === 'dune-runner') tintVehicle(wrapper, color)
     this.addVehicleEffects(wrapper)
     return wrapper
-  }
-
-  private createProceduralVehicle(car: CampaignCar): THREE.Group {
-    const vehicle = new THREE.Group()
-    const design = car.design
-    const buggy = design === 'buggy'
-    const truck = design === 'rally-truck' || design === 'pickup'
-    const suv = design === 'suv' || design === '4x4'
-    const width = suv || truck ? 2.02 : buggy ? 1.9 : 1.82
-    const length = truck ? 4.65 : suv ? 4.35 : buggy ? 3.85 : 4.1
-    const paint = new THREE.MeshStandardMaterial({ color: car.color, roughness: 0.38, metalness: 0.26 })
-    const trim = new THREE.MeshStandardMaterial({ color: 0x25282d, roughness: 0.74, metalness: 0.12 })
-    const glass = new THREE.MeshStandardMaterial({ color: 0x253c4b, roughness: 0.24, metalness: 0.16, transparent: true, opacity: 0.62 })
-    const tire = new THREE.MeshStandardMaterial({ color: 0x17191b, roughness: 0.94 })
-    const alloy = new THREE.MeshStandardMaterial({ color: 0xaeb5b9, roughness: 0.33, metalness: 0.78 })
-    const lamp = new THREE.MeshStandardMaterial({ color: 0xffedb0, emissive: 0xffbd4d, emissiveIntensity: 0.28, roughness: 0.3 })
-    const tail = new THREE.MeshStandardMaterial({ color: 0x8c261f, emissive: 0x8f1c12, emissiveIntensity: 0.34 })
-    const addBox = (name: string, size: [number, number, number], position: [number, number, number], material: THREE.Material) => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material)
-      mesh.name = name
-      mesh.position.set(...position)
-      mesh.castShadow = true
-      mesh.receiveShadow = true
-      vehicle.add(mesh)
-      return mesh
-    }
-
-    addBox('chassis', [width, 0.32, length * 0.84], [0, 0.69, 0], trim)
-    addBox('painted-body', [width * 0.93, 0.48, length * 0.72], [0, 0.86, -0.02], paint)
-    addBox('hood', [width * 0.82, 0.22, length * 0.28], [0, 1.13, length * 0.24], paint)
-    addBox('front-bumper', [width * 1.02, 0.16, 0.18], [0, 0.64, length * 0.46], trim)
-    addBox('rear-bumper', [width * 1.02, 0.15, 0.18], [0, 0.63, -length * 0.46], trim)
-    addBox('grille', [width * 0.33, 0.18, 0.045], [0, 0.91, length * 0.49], trim)
-
-    if (truck) {
-      addBox('cab', [width * 0.78, 0.65, length * 0.37], [0, 1.27, -length * 0.04], paint)
-      addBox('windshield', [width * 0.65, 0.38, 0.045], [0, 1.34, length * 0.17], glass)
-      addBox('cargo-bed', [width * 0.77, 0.2, length * 0.29], [0, 1.12, -length * 0.31], trim)
-      for (const x of [-1, 1]) addBox(`bed-rail-${x}`, [0.08, 0.28, length * 0.3], [x * width * 0.34, 1.31, -length * 0.31], paint)
-    } else if (buggy) {
-      addBox('cockpit', [width * 0.65, 0.14, length * 0.32], [0, 1.12, -0.02], trim)
-      for (const x of [-1, 1]) {
-        addBox(`roll-cage-side-${x}`, [0.075, 0.85, 0.075], [x * width * 0.31, 1.49, -0.02], alloy)
-        addBox(`roll-cage-cross-${x}`, [0.075, 0.075, length * 0.43], [x * width * 0.31, 1.88, -0.02], alloy)
-      }
-      addBox('roll-cage-front', [width * 0.62, 0.075, 0.075], [0, 1.88, length * 0.19], alloy)
-      addBox('roll-cage-rear', [width * 0.62, 0.075, 0.075], [0, 1.88, -length * 0.22], alloy)
-    } else {
-      addBox('roof', [width * 0.72, 0.16, length * 0.33], [0, 1.68, -length * 0.03], paint)
-      addBox('windshield', [width * 0.65, 0.4, 0.045], [0, 1.42, length * 0.15], glass)
-      addBox('rear-window', [width * 0.61, 0.32, 0.045], [0, 1.4, -length * 0.23], glass)
-      if (suv) {
-        addBox('roof-rack-left', [0.08, 0.08, length * 0.29], [-width * 0.31, 1.82, -0.03], alloy)
-        addBox('roof-rack-right', [0.08, 0.08, length * 0.29], [width * 0.31, 1.82, -0.03], alloy)
-      }
-    }
-
-    for (const x of [-1, 1]) {
-      addBox(`headlight-${x}`, [0.28, 0.13, 0.06], [x * width * 0.3, 1.02, length * 0.475], lamp)
-      addBox(`taillight-${x}`, [0.2, 0.15, 0.06], [x * width * 0.34, 0.98, -length * 0.455], tail)
-      addBox(`mirror-${x}`, [0.13, 0.09, 0.22], [x * width * 0.47, 1.28, length * 0.13], trim)
-    }
-
-    const wheels: THREE.Mesh[] = []
-    const frontAxles: THREE.Group[] = []
-    const tireGeometry = new THREE.CylinderGeometry(0.42, 0.42, 0.3, 16)
-    tireGeometry.rotateZ(Math.PI / 2)
-    const hubGeometry = new THREE.CylinderGeometry(0.19, 0.19, 0.315, 12)
-    hubGeometry.rotateZ(Math.PI / 2)
-    for (const x of [-1, 1]) {
-      for (const z of [-1, 1]) {
-        const axle = new THREE.Group()
-        axle.position.set(x * (width * 0.5 + 0.03), 0.43, z * length * 0.32)
-        const wheel = new THREE.Mesh(tireGeometry, tire)
-        wheel.name = `wheel-${z > 0 ? 'front' : 'rear'}-${x}`
-        wheel.castShadow = true
-        const hub = new THREE.Mesh(hubGeometry, alloy)
-        hub.name = `hub-${x}-${z}`
-        axle.add(wheel, hub)
-        vehicle.add(axle)
-        wheels.push(wheel)
-        if (z > 0) frontAxles.push(axle)
-      }
-    }
-
-    const driver = new THREE.Group()
-    const suit = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.38, 0.26), trim)
-    suit.position.y = 1.22
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), new THREE.MeshStandardMaterial({ color: 0xf2bd4b, roughness: 0.32, metalness: 0.18 }))
-    helmet.position.set(0, 1.51, 0.12)
-    driver.add(suit, helmet)
-    vehicle.add(driver)
-    vehicle.userData.wheels = wheels
-    vehicle.userData.frontAxles = frontAxles
-    return vehicle
   }
 
   private addVehicleEffects(wrapper: THREE.Group): void {
@@ -605,23 +747,12 @@ export class RallyGame {
     nitro.visible = false
     wrapper.add(nitro)
     wrapper.userData.nitroFlame = nitro
-    const sandPuffs = [-0.58, 0.58].map(x => {
-      const puff = new THREE.Mesh(
-        new THREE.SphereGeometry(0.55, 8, 6),
-        new THREE.MeshBasicMaterial({ color: 0xd8b47e, transparent: true, opacity: 0, depthWrite: false }),
-      )
-      puff.name = 'zuma-sand-puff'
-      puff.position.set(x, 0.15, -1.78)
-      puff.scale.set(0.68, 0.22, 0.8)
-      wrapper.add(puff)
-      return puff
-    })
-    wrapper.userData.sandPuffs = sandPuffs
   }
 
   private updateVehicleEffects(body: THREE.Group, speed: number, lateral: number, nitro: number, drifting: boolean, dt: number): void {
     const wheels = body.userData.wheels as THREE.Mesh[] | undefined
-    wheels?.forEach(wheel => { wheel.rotation.x += (speed * dt) / 0.42 })
+    const radius = (body.userData.wheelRadius as number | undefined) ?? 0.42
+    wheels?.forEach(wheel => { wheel.rotation.x += (speed * dt) / radius })
     const frontAxles = body.userData.frontAxles as THREE.Group[] | undefined
     const steering = body === this.body ? this.steerInput : 0
     frontAxles?.forEach(axle => { axle.rotation.y = THREE.MathUtils.clamp(steering * 0.15, -0.24, 0.24) })
@@ -644,11 +775,11 @@ export class RallyGame {
     for (let i = 0; i < RIVAL_CARS.length; i += 1) {
       const root = new THREE.Group()
       const car = this.carFor(RIVAL_CARS[i])
-      const body = this.createVehicle(car, RIVAL_COLORS[i])
+      const body = this.createVehicle(car, RIVAL_COLORS[i], { ...DEFAULT_LOOK, paint: RIVAL_COLORS[i], number: 11 + i * 9, livery: (['rally', 'stripes', 'number', 'split', 'rally', 'number'] as const)[i] })
       root.add(body)
       this.scene.add(root)
       const lane = i % 2 === 0 ? -3.2 : 3.2
-      this.rivals.push({ root, body, distance: 0, speed: 0, lane, previousLane: lane, targetLane: lane, targetSpeed: 0, decisionTimer: 0, randomState: i + 1, swerveVelocity: 0, ability: car.ability })
+      this.rivals.push({ root, body, distance: 0, speed: 0, lane, previousLane: lane, targetLane: lane, targetSpeed: 0, decisionTimer: 0, randomState: i + 1, swerveVelocity: 0, ability: car.ability, name: RIVAL_DRIVERS[i] })
     }
   }
 
@@ -656,6 +787,7 @@ export class RallyGame {
     this.scene.remove(this.track.group)
     this.track.dispose()
     this.track = new RallyTrack(stageNumber, CONFIG.race.trackWidth + Math.min(2, Math.floor(stageNumber / 40)))
+    this.lastSkidDistance = 0
     this.scene.add(this.track.group)
     this.camera.userData.ready = false
   }
