@@ -103,7 +103,14 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   body.castShadow = body.receiveShadow = true
   // UVs from ExtrudeGeometry follow shape coords; scale so the livery spans the body side.
   const uv = body.geometry.getAttribute('uv') as THREE.BufferAttribute
-  for (let i = 0; i < uv.count; i += 1) uv.setXY(i, (uv.getX(i) + p.length / 2) / p.length, (uv.getY(i) - 0.3) / 1.8)
+  const pos = body.geometry.getAttribute('position') as THREE.BufferAttribute
+  body.geometry.computeVertexNormals()
+  const nrm = body.geometry.getAttribute('normal') as THREE.BufferAttribute
+  for (let i = 0; i < uv.count; i += 1) {
+    const u = (pos.getZ(i) + p.length / 2) / p.length
+    // Flip the left flank so numbers read correctly from both sides.
+    uv.setXY(i, nrm.getX(i) > 0.5 ? 1 - u : u, (pos.getY(i) - 0.3) / 1.8)
+  }
   vehicle.add(body)
 
   if (p.glass.length) {
