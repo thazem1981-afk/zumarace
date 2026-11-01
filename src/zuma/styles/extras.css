@@ -85,3 +85,14 @@ body, #ui { color: #fff6e8 }
   .garage-main .car-grid { grid-template-columns:1fr; }
   .garage-content { gap:12px; }
 }
+
+
+/* Give each showroom silhouette a distinct profile, matching the 3D body family. */
+.car-design { display:block; margin:0 0 4px; color:#f0c77f; font-size:10px; letter-spacing:.02em }
+.car-swatch-coupe:before { width:72px; height:20px; border-radius:22px 28px 7px 7px; transform:skewX(-23deg) }
+.car-swatch-rally-hatch:before { width:66px; height:25px; border-radius:13px 18px 7px 7px; transform:skewX(-13deg) }
+.car-swatch-sedan:before { width:70px; height:24px; border-radius:15px 20px 8px 8px; transform:skewX(-16deg) }
+.car-swatch-4x4:before,.car-swatch-suv:before { width:68px; height:31px; border-radius:9px 12px 5px 5px; transform:skewX(-8deg) }
+.car-swatch-pickup:before,.car-swatch-rally-truck:before { width:76px; height:28px; border-radius:10px 12px 4px 4px; transform:skewX(-8deg) }
+.car-swatch-buggy:before { width:70px; height:19px; border-radius:15px 18px 4px 4px; transform:skewX(-10deg) }
+.car-swatch-buggy span { width:23px; height:17px; margin-top:-17px; border-radius:7px 8px 2px 2px }
