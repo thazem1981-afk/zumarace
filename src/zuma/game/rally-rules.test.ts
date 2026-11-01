@@ -87,6 +87,12 @@ describe('rally lateral handling', () => {
     expect(wet).toBeLessThan(dry)
   })
 
+  it('saturates steering demand instead of allowing unlimited lateral acceleration', () => {
+    const moderate = advanceLateralMotion({ ...base, steer: 1 })
+    const extreme = advanceLateralMotion({ ...base, steer: 8 })
+    expect(extreme).toBeCloseTo(moderate, 8)
+  })
+
   it('lets a drift carry more sideways momentum after steering input ends', () => {
     const normal = advanceLateralMotion({ ...base, steer: 0, lateralVelocity: 5 })
     const drifting = advanceLateralMotion({ ...base, steer: 0, drifting: true, lateralVelocity: 5 })
