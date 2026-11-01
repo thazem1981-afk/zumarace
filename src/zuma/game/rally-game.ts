@@ -632,7 +632,10 @@ export class RallyGame {
     this.headlight.visible = lightsOn > 0.02
     const apply = (body: THREE.Group, brake: boolean) => {
       const tail = body.userData.tailLamp as THREE.MeshStandardMaterial | undefined
+      const head = body.userData.headLamp as THREE.MeshStandardMaterial | undefined
       if (tail) tail.emissiveIntensity = (brake ? 2.6 : 0.35) + lightsOn * 1.2
+      // Headlamp lenses brighten with the beam so cars read clearly in night and poor weather.
+      if (head) head.emissiveIntensity = 0.6 + lightsOn * 2.8
     }
     apply(this.body, this.braking && this.mode === 'playing')
     for (const r of this.rivals) apply(r.body, false)
@@ -711,6 +714,7 @@ export class RallyGame {
       wrapper.userData.wheelAxles = model.userData.wheelAxles
       wrapper.userData.wheelRadius = model.userData.wheelRadius
       wrapper.userData.tailLamp = model.userData.tailLamp
+      wrapper.userData.headLamp = model.userData.headLamp
       wrapper.add(model)
       this.addVehicleEffects(wrapper)
       return wrapper
