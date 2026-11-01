@@ -83,6 +83,11 @@ describe('garage customisation', () => {
     expect(parseSave(null).engineSound).toBe(true)
     expect(parseSave(JSON.stringify({ version: 2, engineSound: false })).engineSound).toBe(false)
   })
+
+  it('defaults to automatic transmission and preserves manual selection', () => {
+    expect(parseSave(null).transmission).toBe('automatic')
+    expect(parseSave(JSON.stringify({ version: 2, transmission: 'manual' })).transmission).toBe('manual')
+  })
 })
 
 describe('rally lateral handling', () => {
