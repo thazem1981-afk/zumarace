@@ -29,3 +29,12 @@ export function advanceLateralMotion(input: LateralMotion): number {
   const damping = (input.drifting ? 0.92 : 2.8) * Math.sqrt(grip)
   return clamp((input.lateralVelocity + lateralAcceleration * dt) * Math.exp(-damping * dt), -12, 12)
 }
+
+/** Pick a safe passing lane away from a nearby car while staying inside the usable road. */
+export function passingLane(currentLane: number, threatLane: number, laneLimit: number): number {
+  const limit = Math.max(0, laneLimit)
+  const side = currentLane <= threatLane ? -1 : 1
+  const candidate = clamp(threatLane + side * 3.5, -limit, limit)
+  if (Math.abs(candidate - threatLane) > 2.2) return candidate
+  return candidate >= 0 ? -limit : limit
+}
