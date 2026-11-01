@@ -818,7 +818,7 @@ export class RallyGame {
       ? { 'dune-runner': this.modelSources as THREE.Object3D }
       : this.modelSources as CarModelSources
     const dedicatedSource = sources[car.id]
-    if (!dedicatedSource && car.id !== 'dune-runner') {
+    if (!dedicatedSource) {
       const model = buildRealisticCar(lookOverride ? car : { ...car, color }, look)
       wrapper.userData.procedural = true
       wrapper.userData.wheels = model.userData.wheels
