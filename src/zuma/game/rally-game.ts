@@ -389,7 +389,9 @@ export class RallyGame {
       if (this.speed > 0.8) this.speed = Math.max(0, this.speed - CONFIG.race.brakeForce * brakePower * dt)
       else this.speed = Math.max(-6, this.speed - CONFIG.race.reverseForce * Math.max(brakePower, 0.6) * dt)
     } else if (manualThrottle > 0) {
-      this.speed = Math.min(maxSpeed, this.speed + acceleration * manualThrottle * dt)
+      // A downshift must not teleport speed to the lower ratio's limit; let engine braking bleed it off.
+      if (this.speed > maxSpeed) this.speed = Math.max(maxSpeed, this.speed - 4.5 * dt)
+      else this.speed = Math.min(maxSpeed, this.speed + acceleration * manualThrottle * dt)
     } else if (this.speed < CONFIG.race.autoCruiseSpeed) {
       this.speed = Math.min(CONFIG.race.autoCruiseSpeed, this.speed + acceleration * CONFIG.race.autoThrottle * dt)
     } else if (this.speed > CONFIG.race.autoCruiseSpeed) {
