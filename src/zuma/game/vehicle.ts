@@ -128,6 +128,63 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   }
   const L = p.length / 2
   const W = p.width / 2
+
+  // Give the front and rear ends a layered, rally-built appearance instead of plain blocks.
+  const bumperMat = new THREE.MeshStandardMaterial({ color: 0x292d31, roughness: 0.62, metalness: 0.28 })
+  const carbon = new THREE.MeshStandardMaterial({ color: 0x111315, roughness: 0.48, metalness: 0.32 })
+  const alloy = new THREE.MeshStandardMaterial({ color: 0x8d969b, roughness: 0.34, metalness: 0.82 })
+  const detailBox = (size: [number, number, number], at: [number, number, number], mat: THREE.Material, name: string) =>
+    box(size, at, mat, name)
+
+  // Lower splitter, rear diffuser and sculpted side sills visually lower the body.
+  detailBox([p.width * 1.06, 0.09, 0.34], [0, lift + 0.39, L + 0.04], carbon, 'front-splitter')
+  detailBox([p.width * 0.92, 0.1, 0.28], [0, lift + 0.38, -L - 0.03], carbon, 'rear-diffuser')
+  for (const side of [-1, 1]) {
+    detailBox([0.12, 0.16, p.length * 0.48], [side * (W + 0.015), lift + 0.43, 0], bumperMat, 'side-sill')
+  }
+
+  // Horizontal grille vanes, a recessed intake and a contrasting bonnet vent set.
+  for (let i = 0; i < 3; i += 1) {
+    detailBox([p.width * 0.31, 0.025, 0.025], [0, lift + 0.68 + i * 0.055, L + 0.115], alloy, 'grille-vane')
+  }
+  detailBox([p.width * 0.48, 0.055, 0.035], [0, lift + 0.79, L * 0.58], carbon, 'bonnet-intake')
+  for (const side of [-1, 1]) {
+    detailBox([0.12, 0.035, 0.42], [side * 0.42, lift + 0.84, L * 0.52], carbon, 'bonnet-vent')
+  }
+
+  // Pronounced bolt-on arch extensions frame the wide rally tyres.
+  const flareGeo = new THREE.TorusGeometry(p.wheel + 0.13, 0.075, 7, 20, Math.PI)
+  flareGeo.rotateY(Math.PI / 2)
+  for (const side of [-1, 1]) for (const end of [-1, 1]) {
+    const flare = new THREE.Mesh(flareGeo, bumperMat)
+    flare.position.set(side * (W + 0.035), p.wheel, end * (L - p.wheel - 0.35))
+    flare.scale.set(1.12, 1.08, 1)
+    flare.name = 'wide-arch-flare'
+    flare.castShadow = true
+    vehicle.add(flare)
+  }
+
+  // A subtle windscreen divider and side-window pillars make the glasshouse read as glazing.
+  if (p.glass.length) {
+    for (const side of [-1, 1]) {
+      detailBox([0.055, 0.66, 0.07], [side * (W * 0.43), lift + 1.48, -0.18], trim, 'window-pillar')
+      detailBox([0.055, 0.56, 0.07], [side * (W * 0.43), lift + 1.48, 0.72], trim, 'window-pillar')
+    }
+    detailBox([p.width * 0.78, 0.055, 0.07], [0, lift + 1.91, 0.26], trim, 'roof-windscreen-header')
+  }
+
+  if (car.design === 'suv' || car.design === '4x4' || car.design === 'pickup' || car.design === 'rally-truck') {
+    // Utility roof rails and recovery hardware distinguish the taller off-road silhouettes.
+    for (const side of [-1, 1]) {
+      detailBox([0.07, 0.07, p.length * 0.38], [side * W * 0.68, lift + 2.02, -0.12], alloy, 'roof-rail')
+      detailBox([0.09, 0.16, 0.09], [side * W * 0.68, lift + 1.94, 0.78], trim, 'roof-rail-foot')
+    }
+    detailBox([p.width * 0.42, 0.12, 0.12], [0, lift + 0.48, L + 0.19], alloy, 'recovery-hook')
+  } else if (!p.cage) {
+    // Compact roof scoop gives the rally hatch/coupe a purposeful competition profile.
+    detailBox([0.48, 0.13, 0.58], [0, lift + 1.68, -0.12], carbon, 'roof-scoop')
+    detailBox([0.34, 0.035, 0.34], [0, lift + 1.75, -0.12], alloy, 'roof-scoop-inlet')
+  }
   box([p.width * 1.02, 0.22, 0.2], [0, lift + 0.5, L + 0.02], trim, 'front-bumper')
   box([p.width * 1.02, 0.22, 0.2], [0, lift + 0.5, -L - 0.02], trim, 'rear-bumper')
   box([p.width * 0.4, 0.16, 0.04], [0, lift + 0.7, L + 0.1], trim, 'grille')
