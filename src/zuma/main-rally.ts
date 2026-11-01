@@ -167,7 +167,16 @@ export async function boot(): Promise<void> {
     const modelEntries = Object.entries(CAR_MODEL_URLS) as [CarId, string][]
     const [{ Renderer, suggestQuality }, modelScenes] = await Promise.all([
       import('./engine/renderer'),
-      Promise.all(modelEntries.map(async ([id, url]) => [id, (await assets.gltf(url)).scene] as const)),
+      // Optional imported vehicles must never prevent the rally from booting. The game
+      // has a procedural vehicle fallback for any model that is unavailable.
+      Promise.all(modelEntries.map(async ([id, url]) => {
+        try {
+          return [id, (await assets.gltf(url)).scene] as const
+        } catch (error) {
+          console.warn(`Rally vehicle model "${id}" could not be loaded; using the procedural fallback.`, error)
+          return [id, undefined] as const
+        }
+      })),
       document.fonts.ready,
     ]).then(([rendererResult, models]) => [rendererResult, models] as const)
     stopProgress()
