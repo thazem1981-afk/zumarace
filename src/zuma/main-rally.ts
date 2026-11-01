@@ -76,6 +76,11 @@ export async function boot(): Promise<void> {
       game.start(game.stageNumber)
       if (game.mode === 'playing' || game.mode === 'countdown') ui.show('hud')
     },
+    replay: () => {
+      if (!game?.playReplay()) return
+      ui.show('hud')
+      loop?.resetAccumulator()
+    },
     next: stage => {
       if (!game) return
       game.start(stage)
@@ -147,7 +152,7 @@ export async function boot(): Promise<void> {
   applySettings(save.data)
 
   const updatePause = () => {
-    if (game?.mode !== 'playing' && game?.mode !== 'countdown') return
+    if (game?.mode !== 'playing' && game?.mode !== 'countdown' && game?.mode !== 'replay') return
     game.pause()
     touchControls?.cancelAll()
     input.releaseAll()
@@ -190,7 +195,7 @@ export async function boot(): Promise<void> {
       beforeFrame: frameSeconds => input.update(frameSeconds),
       step: dt => {
         if (input.consume('pause')) {
-          if (g.mode === 'playing' || g.mode === 'countdown') updatePause()
+          if (g.mode === 'playing' || g.mode === 'countdown' || g.mode === 'replay') updatePause()
           else if (g.mode === 'paused' && ui.screen === 'pause') {
             g.resume()
             if ((g.mode as RallyMode) === 'playing') audio.startMusic()
@@ -205,7 +210,7 @@ export async function boot(): Promise<void> {
         ui.frame(frameSeconds)
         loop!.paused = g.mode === 'paused'
         g.render(alpha, frameSeconds)
-        if (g.mode === 'countdown' || g.mode === 'playing' || g.mode === 'ended') ui.updateHud(g.hud())
+        if (g.mode === 'countdown' || g.mode === 'playing' || g.mode === 'replay' || g.mode === 'ended') ui.updateHud(g.hud())
       },
     })
     loop.start()
