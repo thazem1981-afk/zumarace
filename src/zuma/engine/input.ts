@@ -3,7 +3,7 @@
  * state plus held actions. Movement axes remain independent so full throttle and full steering
  * can be used together without diagonal speed loss.
  */
-export type Action = 'brake' | 'drift' | 'turbo' | 'throttle' | 'pause' | 'confirm' | 'back' | 'interact' | 'jump' | 'dash' | 'sprint' | 'camera'
+export type Action = 'brake' | 'drift' | 'turbo' | 'throttle' | 'gearUp' | 'gearDown' | 'pause' | 'confirm' | 'back' | 'interact' | 'jump' | 'dash' | 'sprint' | 'camera'
 export type InputMethod = 'keyboard' | 'gamepad' | 'touch'
 
 const KEY_BINDINGS: Record<Action, string[]> = {
@@ -15,7 +15,8 @@ const KEY_BINDINGS: Record<Action, string[]> = {
   pause: ['Escape', 'KeyP'],
   confirm: ['Enter', 'NumpadEnter'],
   back: [],
-  interact: ['KeyE'],
+  interact: [],
+  gearUp: ['KeyE'], gearDown: ['KeyQ'],
   camera: ['KeyC', 'KeyV'],
 }
 const MOVE_KEYS = {
@@ -26,8 +27,8 @@ const MOVE_KEYS = {
 }
 // Standard gamepad: A=0, B=1, X=2, LB=4, RB=5, LT=6, RT=7, Start=9.
 const PAD_BINDINGS: Record<Action, number[]> = {
-  brake: [], drift: [4], turbo: [2, 5], throttle: [], jump: [0], dash: [2, 5], sprint: [4, 10],
-  pause: [9], confirm: [0], back: [1], interact: [], camera: [3],
+  brake: [], drift: [4], turbo: [2, 5], throttle: [], jump: [0], dash: [2, 5], sprint: [4],
+  pause: [9], confirm: [0], back: [1], interact: [], camera: [3], gearUp: [10], gearDown: [11],
 }
 
 export class Input {
