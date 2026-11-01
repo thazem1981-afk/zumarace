@@ -20,6 +20,8 @@ const COURSE_ARCHETYPES = [
   { rx: 65, rz: 30, lobes: 3, wave: 0.12, secondary: 0.07, frequency: 4, corner: 0.8, sweep: 0.03 },
   { rx: 54, rz: 42, lobes: 5, wave: 0.15, secondary: 0.052, frequency: 2, corner: 1.16, sweep: 0.06 },
   { rx: 58, rz: 44, lobes: 6, wave: 0.09, secondary: 0.06, frequency: 8, corner: 0.95, sweep: 0.05 },
+  // Narrow, high-frequency switchback course with tighter late-apex corners.
+  { rx: 46, rz: 62, lobes: 7, wave: 0.14, secondary: 0.06, frequency: 9, corner: 0.72, sweep: 0.095 },
 ] as const
 
 /** Deterministic course points; unique stage seeds vary each loop while keeping the radius positive. */
