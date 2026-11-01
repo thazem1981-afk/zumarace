@@ -148,6 +148,20 @@ export class Input {
 
   endFrame(): void { this.pressed_.clear() }
 
+  /** Release transient controls when gameplay is interrupted (pause, focus loss or scene exit). */
+  releaseAll(): void {
+    this.keys.clear()
+    this.touchMove.x = 0
+    this.touchMove.y = 0
+    this.touchButtons.clear()
+    this.held_.clear()
+    this.pressed_.clear()
+    this.move.x = 0
+    this.move.y = 0
+    this.look.x = 0
+    this.look.y = 0
+  }
+
   addTouchLook(dx: number, dy: number): void {
     this.method = 'touch'
     this.look.x += dx * 0.006 * this.sensitivity
