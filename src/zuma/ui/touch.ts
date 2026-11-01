@@ -9,6 +9,7 @@ export class TouchControls {
   private readonly radius = 64
   private readonly onMove: (e: PointerEvent) => void
   private readonly onEnd: (e: PointerEvent) => void
+  private readonly resetButtons: (() => void)[] = []
 
   constructor(root: HTMLElement, private readonly input: Input, private readonly active: () => boolean) {
     const layer = root.querySelector<HTMLElement>('.touch')!
@@ -67,21 +68,12 @@ export class TouchControls {
     window.addEventListener('pointerup', this.onEnd)
     window.addEventListener('pointercancel', this.onEnd)
     window.addEventListener('lostpointercapture', this.onEnd)
-    const resetButtons: (() => void)[] = []
-    window.addEventListener('blur', () => {
-      this.stickId = null
-      this.knob.style.transform = ''
-      this.stick.classList.remove('is-active')
-      this.input.setTouchMove(0, 0)
-      this.stick.style.left = ''
-      this.stick.style.top = ''
-      resetButtons.forEach(reset => reset())
-    })
+    window.addEventListener('blur', () => this.cancelAll())
 
     for (const btn of layer.querySelectorAll<HTMLElement>('[data-touch]')) {
       const action = btn.dataset.touch as Action
       const pointers = new Set<number>()
-      resetButtons.push(() => {
+      this.resetButtons.push(() => {
         if (pointers.size === 0) return
         pointers.clear()
         btn.classList.remove('is-down')
@@ -104,5 +96,16 @@ export class TouchControls {
       btn.addEventListener('pointercancel', up)
       btn.addEventListener('lostpointercapture', up)
     }
+  }
+
+  /** Cancel active pointers so controls cannot remain held across a pause or focus change. */
+  cancelAll(): void {
+    this.stickId = null
+    this.knob.style.transform = ''
+    this.stick.classList.remove('is-active')
+    this.stick.style.left = ''
+    this.stick.style.top = ''
+    this.input.setTouchMove(0, 0)
+    this.resetButtons.forEach(reset => reset())
   }
 }
