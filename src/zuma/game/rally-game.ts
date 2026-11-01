@@ -545,7 +545,8 @@ export class RallyGame {
       speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(spoken)
       u.lang = 'ar-SA'
-      u.rate = 1.2
+      u.rate = 1
+      u.pitch = 0.95
       u.volume = 0.9
       speechSynthesis.speak(u)
     } catch { /* Voice is optional; the on-screen note still shows. */ }
