@@ -15,6 +15,17 @@ import mazenImg from '../../assets/codriver-mazen.jpg'
 const PORTRAITS: Record<DriverId, string> = { salem: salemImg, layla: laylaImg, karim: karimImg }
 const CAMERA_LABEL: Record<string, string> = { chase: 'مطاردة', far: 'مطاردة بعيدة', hood: 'قمرة القيادة', bumper: 'المصد', tv: 'تلفزيونية' }
 const WEATHER_ICON: Record<string, string> = { clear: '☀', cloudy: '☁', rain: '☔', fog: '≋', snow: '❄', sandstorm: '🌪' }
+const CAR_DESIGN_LABEL: Record<string, string> = {
+  glb: 'رالي',
+  'rally-hatch': 'هاتشباك رياضية',
+  coupe: 'كوبيه منخفضة',
+  '4x4': 'دفع رباعي',
+  sedan: 'سيدان رالي',
+  pickup: 'بيك أب',
+  buggy: 'باجي صحراوي',
+  'rally-truck': 'شاحنة رالي',
+  suv: 'دفع رباعي مرتفع',
+}
 
 export type RallyScreen = 'boot' | 'title' | 'campaign' | 'garage' | 'hud' | 'pause' | 'settings' | 'results'
 export type RallyUiActions = {
@@ -134,7 +145,7 @@ export class RallyUi {
       const actionText = selected ? this.i18n.t('shop.selected') : owned ? this.i18n.t('shop.select') : this.i18n.t('shop.buy', { price: number(car.price) })
       return `<article class="car-card${selected ? ' is-selected' : ''}" style="--car-color:${lookFor(this.save.data.garage, car.id).paint ?? car.color}" aria-label="${escapeHtml(car.name)}">
         <div class="car-swatch car-swatch-${car.design}" aria-hidden="true"><span></span><i></i></div>
-        <div class="car-card-copy"><div class="car-card-title"><h3>${escapeHtml(car.name)}</h3><small class="car-state ${selected ? 'is-current' : owned ? 'is-owned' : 'is-locked'}">${selected ? 'مختارة' : owned ? 'مملوكة' : 'مقفلة'}</small></div><p>${this.i18n.t('shop.speed')}: ${number(car.topSpeed)} · ${this.i18n.t('shop.acceleration')}: ${number(car.acceleration)}</p><p>${this.i18n.t('shop.grip')}: ${number(car.grip)}</p><p class="car-ability"><b>${this.i18n.t('shop.ability')}: ${this.i18n.t(`carAbility.${car.ability}.name`)}</b> — ${this.i18n.t(`carAbility.${car.ability}.desc`)}</p></div>
+        <div class="car-card-copy"><div class="car-card-title"><h3>${escapeHtml(car.name)}</h3><small class="car-state ${selected ? 'is-current' : owned ? 'is-owned' : 'is-locked'}">${selected ? 'مختارة' : owned ? 'مملوكة' : 'مقفلة'}</small></div><small class="car-design">${CAR_DESIGN_LABEL[car.design] ?? 'سيارة رالي'}</small><p>${this.i18n.t('shop.speed')}: ${number(car.topSpeed)} · ${this.i18n.t('shop.acceleration')}: ${number(car.acceleration)}</p><p>${this.i18n.t('shop.grip')}: ${number(car.grip)}</p><p class="car-ability"><b>${this.i18n.t('shop.ability')}: ${this.i18n.t(`carAbility.${car.ability}.name`)}</b> — ${this.i18n.t(`carAbility.${car.ability}.desc`)}</p></div>
         <button data-nav class="btn ${selected ? 'btn-selected' : owned ? '' : 'btn-accent'}" data-action="${action}" data-car="${car.id}" aria-pressed="${selected}" aria-label="${selected ? 'السيارة المختارة' : owned ? 'اختيار ' + escapeHtml(car.name) : 'شراء ' + escapeHtml(car.name)}" ${selected || (!owned && progress.coins < car.price) ? 'disabled' : ''}>${escapeHtml(actionText)}</button>
       </article>`
     }).join('')

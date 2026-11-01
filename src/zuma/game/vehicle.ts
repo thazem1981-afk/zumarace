@@ -11,10 +11,17 @@ function profileFor(car: CampaignCar): Profile {
       return { length: 3.9, width: 1.9, wheel: 0.5, clearance: 0.55, cage: true,
         points: [[-1.9, 0.55], [1.7, 0.55], [1.95, 0.75], [1.5, 0.95], [0.5, 1.0], [-1.2, 1.05], [-1.9, 0.95]], glass: [] }
     case 'pickup':
-    case 'rally-truck':
       return { length: 4.8, width: 2.05, wheel: 0.5, clearance: 0.5, bed: true,
         points: [[-2.4, 0.55], [2.35, 0.55], [2.45, 1.05], [1.4, 1.25], [0.85, 1.95], [-0.45, 2.0], [-0.6, 1.3], [-2.4, 1.3]],
         glass: [[1.25, 1.3], [0.82, 1.88], [-0.35, 1.92], [-0.45, 1.32]] }
+    case 'rally-truck':
+      return { length: 5.1, width: 2.12, wheel: 0.56, clearance: 0.62, bed: true,
+        points: [[-2.55, 0.64], [2.45, 0.64], [2.58, 1.12], [1.48, 1.36], [0.98, 2.08], [-0.55, 2.12], [-0.72, 1.42], [-2.55, 1.42]],
+        glass: [[1.32, 1.42], [0.94, 2.0], [-0.48, 2.04], [-0.58, 1.44]] }
+    case 'rally-hatch':
+      return { length: 4.0, width: 1.86, wheel: 0.44, clearance: 0.38,
+        points: [[-2.0, 0.43], [1.96, 0.43], [2.05, 0.78], [1.18, 1.02], [0.55, 1.56], [-0.92, 1.58], [-1.55, 1.08], [-1.94, 0.94]],
+        glass: [[1.08, 1.04], [0.5, 1.51], [-0.86, 1.53], [-1.48, 1.1]] }
     case 'suv':
     case '4x4':
       return { length: 4.5, width: 2.0, wheel: 0.48, clearance: 0.48,
@@ -203,8 +210,19 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   vehicle.add(ex)
 
   if (p.bed) {
-    box([p.width * 0.86, 0.06, 1.7], [0, lift + 1.1, -L + 1.0], trim, 'bed-floor')
-    box([p.width * 0.7, 0.5, 0.5], [0, lift + 1.4, -L + 0.9], trim, 'spare')
+    // Raised bed rails and a tailgate give pickups and rally trucks a readable utility rear.
+    box([p.width * 0.86, 0.06, 1.7], [0, lift + 1.1, -L + 1.0], carbon, 'bed-floor')
+    for (const side of [-1, 1]) {
+      box([0.08, 0.42, 1.7], [side * W * 0.86, lift + 1.33, -L + 1.0], trim, 'bed-side')
+      box([0.1, 0.08, 1.7], [side * W * 0.86, lift + 1.57, -L + 1.0], alloy, 'bed-rail')
+    }
+    box([p.width * 0.86, 0.42, 0.08], [0, lift + 1.33, -L + 1.84], trim, 'tailgate')
+    box([p.width * 0.7, 0.08, 0.08], [0, lift + 1.57, -L + 1.84], alloy, 'tailgate-cap')
+    const spare = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.72, r * 0.72, 0.18, 18), tire)
+    spare.position.set(0, lift + 1.24, -L + 1.0)
+    spare.name = 'bed-spare-wheel'
+    spare.castShadow = true
+    vehicle.add(spare)
   }
   if (p.cage) {
     const tube = new THREE.MeshStandardMaterial({ color: look.rim, roughness: 0.3, metalness: 0.8 })
@@ -231,9 +249,16 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   const tireGeo = new THREE.CylinderGeometry(r, r, 0.32, 24)
   tireGeo.rotateZ(Math.PI / 2)
   const treadGeo = new THREE.BoxGeometry(0.34, 0.05, 0.12)
-  const rimGeo = new THREE.CylinderGeometry(r * 0.62, r * 0.62, 0.34, 16)
+  const rimGeo = new THREE.CylinderGeometry(r * 0.62, r * 0.62, 0.34, 20)
   rimGeo.rotateZ(Math.PI / 2)
-  const spokeGeo = new THREE.BoxGeometry(0.35, r * 1.1, 0.06)
+  const spokeGeo = new THREE.BoxGeometry(0.32, r * 0.82, 0.075)
+  const brakeDiscGeo = new THREE.CylinderGeometry(r * 0.48, r * 0.48, 0.035, 20)
+  brakeDiscGeo.rotateZ(Math.PI / 2)
+  const hubGeo = new THREE.CylinderGeometry(r * 0.16, r * 0.16, 0.37, 16)
+  hubGeo.rotateZ(Math.PI / 2)
+  const lugGeo = new THREE.SphereGeometry(0.035, 8, 6)
+  const brake = new THREE.MeshStandardMaterial({ color: 0x555b60, metalness: 0.86, roughness: 0.38 })
+  const caliper = new THREE.MeshStandardMaterial({ color: 0xc45b32, metalness: 0.35, roughness: 0.5 })
   const archGeo = new THREE.TorusGeometry(r + 0.08, 0.08, 6, 14, Math.PI)
   archGeo.rotateY(Math.PI / 2)
   for (const x of [-1, 1]) for (const z of [-1, 1]) {
@@ -243,15 +268,53 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
     spin.name = `wheel-${z > 0 ? 'front' : 'rear'}-${x}`
     const t = new THREE.Mesh(tireGeo, tire); t.castShadow = true
     spin.add(t)
+    const treadInstances = new THREE.InstancedMesh(treadGeo, tire, 14)
+    const wheelPart = new THREE.Object3D()
     for (let k = 0; k < 14; k += 1) {
-      const tr = new THREE.Mesh(treadGeo, tire)
       const a = (k / 14) * Math.PI * 2
-      tr.position.set(0, Math.cos(a) * r, Math.sin(a) * r)
-      tr.rotation.x = -a
-      spin.add(tr)
+      wheelPart.position.set(0, Math.cos(a) * r, Math.sin(a) * r)
+      wheelPart.rotation.set(-a, 0, 0)
+      wheelPart.updateMatrix()
+      treadInstances.setMatrixAt(k, wheelPart.matrix)
     }
-    const rm = new THREE.Mesh(rimGeo, rim); spin.add(rm)
-    for (let k = 0; k < 3; k += 1) { const sp = new THREE.Mesh(spokeGeo, rim); sp.rotation.x = (k / 3) * Math.PI; spin.add(sp) }
+    treadInstances.instanceMatrix.needsUpdate = true
+    spin.add(treadInstances)
+    const rm = new THREE.Mesh(rimGeo, rim); rm.name = 'alloy-rim'; spin.add(rm)
+    // Ventilated brake rotors and five individual spokes make the wheel read as a real assembly.
+    for (const side of [-1, 1]) {
+      const disc = new THREE.Mesh(brakeDiscGeo, brake)
+      disc.position.x = side * 0.12
+      disc.name = 'ventilated-brake-disc'
+      spin.add(disc)
+      const hub = new THREE.Mesh(hubGeo, rim)
+      hub.position.x = side * 0.015
+      spin.add(hub)
+      const clamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, r * 0.34, r * 0.28), caliper)
+      clamp.position.set(side * 0.15, r * 0.18, -r * 0.28)
+      clamp.name = 'brake-caliper'
+      spin.add(clamp)
+      const lugs = new THREE.InstancedMesh(lugGeo, alloy, 5)
+      for (let lug = 0; lug < 5; lug += 1) {
+        const a = (lug / 5) * Math.PI * 2
+        wheelPart.position.set(side * 0.19, Math.cos(a) * r * 0.19, Math.sin(a) * r * 0.19)
+        wheelPart.rotation.set(0, 0, 0)
+        wheelPart.updateMatrix()
+        lugs.setMatrixAt(lug, wheelPart.matrix)
+      }
+      lugs.instanceMatrix.needsUpdate = true
+      spin.add(lugs)
+    }
+    const spokes = new THREE.InstancedMesh(spokeGeo, rim, 5)
+    for (let k = 0; k < 5; k += 1) {
+      const a = (k / 5) * Math.PI * 2
+      wheelPart.position.set(0, Math.cos(a) * r * 0.31, Math.sin(a) * r * 0.31)
+      wheelPart.rotation.set(-a, 0, 0)
+      wheelPart.updateMatrix()
+      spokes.setMatrixAt(k, wheelPart.matrix)
+    }
+    spokes.name = 'alloy-spokes'
+    spokes.instanceMatrix.needsUpdate = true
+    spin.add(spokes)
     axle.add(spin)
     vehicle.add(axle)
     wheelAxles.push(axle)
