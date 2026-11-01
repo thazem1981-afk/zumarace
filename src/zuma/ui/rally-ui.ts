@@ -320,8 +320,8 @@ export class RallyUi {
     const paint = look.paint ?? car.color
     panel.innerHTML = `<h3>تخصيص المظهر · ${escapeHtml(car.name)}</h3>
       <p class="shop-note">التخصيص مجاني ولا يغيّر أداء السيارة.</p>
-      <div class="look-row"><span>لون الطلاء</span><div class="swatches">${[car.color, ...PAINT_COLORS.filter(c => c !== car.color)].map(c => `<button data-nav class="swatch${c === paint ? ' is-on' : ''}" data-action="paint" data-value="${c}" style="--c:${c}" aria-label="لون ${c}"></button>`).join('')}</div></div>
-      <div class="look-row"><span>لون الجنوط</span><div class="swatches">${RIM_COLORS.map(c => `<button data-nav class="swatch${c === look.rim ? ' is-on' : ''}" data-action="rim" data-value="${c}" style="--c:${c}" aria-label="جنط ${c}"></button>`).join('')}</div></div>
+      <div class="look-row"><label for="custom-paint">لون مخصص</label><input id="custom-paint" class="custom-color" type="color" value="${paint}" aria-label="اختيار لون الطلاء"></div><div class="look-row"><span>لون الطلاء</span><div class="swatches">${[car.color, ...PAINT_COLORS.filter(c => c !== car.color)].map(c => `<button data-nav class="swatch${c === paint ? ' is-on' : ''}" data-action="paint" data-value="${c}" style="--c:${c}" aria-label="لون ${c}"></button>`).join('')}</div></div>
+      <div class="look-row"><label for="custom-rim">لون جنوط مخصص</label><input id="custom-rim" class="custom-color" type="color" value="${look.rim}" aria-label="اختيار لون الجنوط"></div><div class="look-row"><span>لون الجنوط</span><div class="swatches">${RIM_COLORS.map(c => `<button data-nav class="swatch${c === look.rim ? ' is-on' : ''}" data-action="rim" data-value="${c}" style="--c:${c}" aria-label="جنط ${c}"></button>`).join('')}</div></div>
       <div class="look-row"><span>الملصقات</span><div class="chips">${LIVERIES.map(l => `<button data-nav class="chip${l.id === look.livery ? ' is-on' : ''}" data-action="livery" data-value="${l.id}">${escapeHtml(l.label)}</button>`).join('')}</div></div>
       <div class="look-row"><span>الجناح الخلفي</span><div class="chips"><button data-nav class="chip${look.spoiler ? ' is-on' : ''}" data-action="spoiler" data-value="1">مركّب</button><button data-nav class="chip${!look.spoiler ? ' is-on' : ''}" data-action="spoiler" data-value="0">بدون</button></div></div>
       <div class="look-row"><span>رقم السيارة</span><div class="chips"><button data-nav class="chip" data-action="number" data-value="-1" aria-label="أقل">−</button><b class="car-number">${number(look.number)}</b><button data-nav class="chip" data-action="number" data-value="1" aria-label="أكثر">+</button></div></div>`
@@ -419,6 +419,13 @@ export class RallyUi {
 
   private onInput(event: Event): void {
     const target = event.target as HTMLInputElement
+    if (target.matches('input[type="color"]')) {
+      const id = this.save.data.raceProgress.selectedCar
+      this.actions.setLook(id, target.id === 'custom-paint' ? { paint: target.value } : { rim: target.value })
+      const swatch = target.id === 'custom-paint' ? '.car-card.is-selected' : null
+      if (swatch) this.root.querySelector<HTMLElement>(swatch)?.style.setProperty('--car-color', target.value)
+      return
+    }
     if (!target.matches('input[type="range"]')) return
     const value = Number(target.value)
     this.updateRange(target)
