@@ -29,10 +29,12 @@ export class Renderer {
   private composer?: EffectComposer
   private bloom?: UnrealBloomPass
   private preset: Preset
+  private quality: Quality
   private scene?: THREE.Scene
   private camera?: THREE.PerspectiveCamera
 
   constructor(readonly canvas: HTMLCanvasElement, quality: Quality) {
+    this.quality = quality
     this.preset = QUALITY_PRESETS[quality]
     const coarsePointer = matchMedia('(pointer: coarse)').matches
     this.gl = new THREE.WebGLRenderer({ canvas, antialias: this.preset.antialias && !coarsePointer, powerPreference: coarsePointer ? 'low-power' : 'high-performance' })
@@ -42,7 +44,7 @@ export class Renderer {
       window.dispatchEvent(new CustomEvent('rally:webgl-lost'))
     })
     canvas.addEventListener('webglcontextrestored', () => {
-      this.applyQuality(quality)
+      this.applyQuality(this.quality)
       window.dispatchEvent(new CustomEvent('rally:webgl-restored'))
     })
     this.gl.toneMapping = THREE.ACESFilmicToneMapping
@@ -57,6 +59,7 @@ export class Renderer {
   }
 
   applyQuality(quality: Quality): void {
+    this.quality = quality
     this.preset = QUALITY_PRESETS[quality]
     this.gl.shadowMap.enabled = this.preset.shadows
     // High-density mobile screens can make every full-screen pass disproportionately expensive.
