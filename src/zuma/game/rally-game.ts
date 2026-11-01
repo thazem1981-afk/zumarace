@@ -654,7 +654,7 @@ export class RallyGame {
     const emitFor = (pos: THREE.Vector3, fwd: THREE.Vector3, speed: number, slide: number, rate: number) => {
       const s = Math.abs(speed)
       if (s < 4 || (!loose && !wet && slide < 1.5)) return
-      const n = rate * (s / CONFIG.race.maxSpeed) * (loose ? 1 : 0.5) * (this.reducedMotion ? 0.4 : 1) + slide * 0.12
+      const n = rate * (s / CONFIG.race.maxSpeed) * (loose ? 1 : 0.5) * (this.reducedMotion ? 0.12 : 1) + slide * 0.12
       let count = Math.floor(n)
       if (Math.random() < n - count) count += 1
       const side = new THREE.Vector3(fwd.z, 0, -fwd.x)
@@ -716,6 +716,7 @@ export class RallyGame {
       wrapper.userData.procedural = true
       wrapper.userData.wheels = model.userData.wheels
       wrapper.userData.frontAxles = model.userData.frontAxles
+      wrapper.userData.wheelAxles = model.userData.wheelAxles
       wrapper.userData.wheelRadius = model.userData.wheelRadius
       wrapper.userData.tailLamp = model.userData.tailLamp
       wrapper.add(model)
@@ -773,6 +774,13 @@ export class RallyGame {
     const frontAxles = body.userData.frontAxles as THREE.Group[] | undefined
     const steering = body === this.body ? this.steerInput : 0
     frontAxles?.forEach(axle => { axle.rotation.y = THREE.MathUtils.clamp(steering * 0.15, -0.24, 0.24) })
+    // Independent wheel travel gives the body a planted, sprung feel over rough stages.
+    const axles = body.userData.wheelAxles as THREE.Group[] | undefined
+    axles?.forEach((axle, index) => {
+      const base = radius
+      const travel = this.reducedMotion ? 0 : Math.sin(this.time * (8 + Math.min(1, Math.abs(speed) / 30) * 5) + index * 1.73) * 0.018
+      axle.position.y = base + travel
+    })
     const flame = body.userData.nitroFlame as THREE.Mesh | undefined
     if (flame) {
       flame.visible = nitro > 0.02
