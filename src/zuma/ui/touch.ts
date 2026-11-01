@@ -66,10 +66,27 @@ export class TouchControls {
     window.addEventListener('pointermove', this.onMove, { passive: true })
     window.addEventListener('pointerup', this.onEnd)
     window.addEventListener('pointercancel', this.onEnd)
+    window.addEventListener('lostpointercapture', this.onEnd)
+    const resetButtons: (() => void)[] = []
+    window.addEventListener('blur', () => {
+      this.stickId = null
+      this.knob.style.transform = ''
+      this.stick.classList.remove('is-active')
+      this.input.setTouchMove(0, 0)
+      this.stick.style.left = ''
+      this.stick.style.top = ''
+      resetButtons.forEach(reset => reset())
+    })
 
     for (const btn of layer.querySelectorAll<HTMLElement>('[data-touch]')) {
       const action = btn.dataset.touch as Action
       const pointers = new Set<number>()
+      resetButtons.push(() => {
+        if (pointers.size === 0) return
+        pointers.clear()
+        btn.classList.remove('is-down')
+        this.input.setTouchButton(action, false)
+      })
       const up = (e: PointerEvent) => {
         if (!pointers.delete(e.pointerId) || pointers.size > 0) return
         btn.classList.remove('is-down')

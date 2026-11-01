@@ -649,7 +649,7 @@ export class RallyGame {
     const emitFor = (pos: THREE.Vector3, fwd: THREE.Vector3, speed: number, slide: number, rate: number) => {
       const s = Math.abs(speed)
       if (s < 4 || (!loose && !wet && slide < 1.5)) return
-      const n = rate * (s / CONFIG.race.maxSpeed) * (loose ? 1 : 0.5) * (this.reducedMotion ? 0.12 : 1) + slide * 0.12
+      const n = (rate * (s / CONFIG.race.maxSpeed) * (loose ? 1 : 0.5) + slide * 0.12) * (this.reducedMotion ? 0.12 : 1)
       let count = Math.floor(n)
       if (Math.random() < n - count) count += 1
       const side = new THREE.Vector3(fwd.z, 0, -fwd.x)
@@ -778,6 +778,24 @@ export class RallyGame {
         wrapper.add(lamp)
       }
       wrapper.userData.tailLamp = tailLamp
+    }
+
+    // Imported GLB cars may not expose a headlamp material for stage lighting.
+    // Add a matching pair so their front lenses respond to night and poor weather.
+    if (!wrapper.userData.headLamp) {
+      const headLamp = new THREE.MeshStandardMaterial({
+        color: 0xfff1d0,
+        emissive: 0xffe2a0,
+        emissiveIntensity: 0.6,
+        roughness: 0.2,
+      })
+      for (const x of [-0.66, 0.66]) {
+        const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.13, 0.06), headLamp)
+        lamp.name = 'zuma-fallback-head-lamp'
+        lamp.position.set(x, 0.82, 2.16)
+        wrapper.add(lamp)
+      }
+      wrapper.userData.headLamp = headLamp
     }
   }
 
