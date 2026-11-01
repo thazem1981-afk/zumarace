@@ -511,7 +511,7 @@ function driverPortrait(driver: Driver): string {
   const portrait = PORTRAITS[driver.id]
   if (portrait) return `<img src="${portrait}" alt="" width="72" height="72" loading="lazy">`
   const initials = driver.name.split(' ').slice(0, 2).map(part => part[0] ?? '').join('')
-  return `<div class="driver-avatar" aria-hidden="true" style="--suit:${driver.suit}">${escapeHtml(initials)}</div>`
+  return `<div class="driver-avatar" aria-hidden="true" style="--suit:${driver.suit};width:72px;height:72px;min-width:72px;border-radius:50%;display:grid;place-items:center;background:var(--suit);color:white;font-size:24px;font-weight:900">${escapeHtml(initials)}</div>`
 }
 
 function number(value: number): string {
