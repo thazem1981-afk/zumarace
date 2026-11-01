@@ -45,6 +45,7 @@ export async function boot(): Promise<void> {
   const applySettings = (data: SaveData) => {
     input.sensitivity = data.sensitivity
     input.invertY = data.invertY
+    game?.setTransmission(data.transmission)
     audio.setVolumes(data.musicVolume, data.sfxVolume, data.muted)
     audio.setEngineSoundEnabled(data.engineSound)
     if (game) {
@@ -179,6 +180,7 @@ export async function boot(): Promise<void> {
     })
     game.reducedMotion = save.data.reducedMotion
     game.cameraMode = save.data.cameraMode
+    game.setTransmission(save.data.transmission)
     game.setDriver(save.data.driver)
     game.setGarage(save.data.garage)
     game.preview(save.data.raceProgress.unlockedStage)
