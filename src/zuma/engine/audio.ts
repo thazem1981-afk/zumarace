@@ -21,7 +21,6 @@ export class Audio {
   private musicOn = false
   private muted = false
   private sfxVolume = 0.8
-  private welcomePlayed = false
   private buffers = new Map<string, AudioBuffer>()
 
   constructor() {
@@ -48,19 +47,6 @@ export class Audio {
     this.music.gain.setTargetAtTime(muted ? 0 : music * 0.55, t, 0.05)
     this.sfx.gain.setTargetAtTime(muted ? 0 : sfx * 0.8, t, 0.05)
     this.engineBus.gain.setTargetAtTime(muted ? 0 : sfx * 0.48, t, 0.05)
-  }
-
-  /** One-time spoken title greeting; called only from a user gesture to satisfy browser autoplay rules. */
-  playWelcome(): void {
-    if (this.welcomePlayed || this.muted || this.sfxVolume <= 0 || !('speechSynthesis' in window)) return
-    this.welcomePlayed = true
-    const greeting = new SpeechSynthesisUtterance('Welcome to Zuma Game!')
-    greeting.lang = 'en-US'
-    greeting.rate = 0.9
-    greeting.pitch = 0.95
-    greeting.volume = this.sfxVolume
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(greeting)
   }
 
   setEngineSoundEnabled(enabled: boolean): void {

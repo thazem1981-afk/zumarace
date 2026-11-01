@@ -12,7 +12,6 @@ import { buildRealisticCar } from './vehicle'
 import { DEFAULT_LOOK, lookFor, type CarLook, type Garage } from './customization'
 import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './characters'
 import { ParticlePool, SkidMarks } from './vfx'
-import { describeNote, paceNotePhase } from './pace-notes'
 import { advanceLateralMotion, passingLane } from './handling'
 import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear, type TransmissionMode } from './transmission'
 import { sampleReplay, type ReplayFrame } from './replay'
@@ -50,8 +49,6 @@ export type RallyHud = {
   drifting: boolean
   countdown: number
   starting: boolean
-  coDriver: string
-  coDriverUrgent: boolean
   conditions: string
   camera: CameraMode
   standings: { name: string; player: boolean }[]
@@ -143,11 +140,6 @@ export class RallyGame {
   private readonly skids = new SkidMarks(1000)
   private readonly headlight = new THREE.SpotLight(0xfff1d0, 0, 90, 0.55, 0.45, 1.2)
   private readonly heading = new THREE.Vector3(0, 0, 1)
-  private coDriverText = ''
-  private coDriverTimer = 0
-  private coDriverUrgent = false
-  private readonly announced = new Set<string>()
-  private lastLapAnnounced = 0
   private lastSkidDistance = 0
   private braking = false
   private readonly tmpV = new THREE.Vector3()
@@ -227,10 +219,6 @@ export class RallyGame {
     this.impactResetNoticeSeconds = 0
     this.collidedHazards.clear()
     this.applyConditions(stageNumber)
-    this.announced.clear()
-    this.lastLapAnnounced = 1
-    this.coDriverText = ''
-    this.coDriverTimer = 0
     this.raceRunNumber += 1
     for (const [i, rival] of this.rivals.entries()) {
       const row = Math.floor(i / 2)
@@ -427,7 +415,6 @@ export class RallyGame {
       return
     }
     if (this.mode !== 'playing') { this.audio.updateEngine(0, 0, false, false); return }
-    this.coDriverTimer = Math.max(0, this.coDriverTimer - dt)
     this.startSignalTime = Math.max(0, this.startSignalTime - dt)
     this.elapsed += dt
     this.replayCaptureTimer += dt
@@ -513,7 +500,6 @@ export class RallyGame {
     this.updateRivals(dt)
     if (this.mode !== 'playing') return
     this.recordReplayFrame()
-    this.updateCoDriver()
     this.checkHazards()
     this.checkRivalCollision()
     if (this.elapsed >= this.currentStage.timeLimitSeconds) {
@@ -608,8 +594,6 @@ export class RallyGame {
       drifting: this.driftActive,
       countdown: this.mode === 'countdown' ? Math.max(1, Math.ceil(this.countdownRemaining)) : 0,
       starting: this.startSignalTime > 0,
-      coDriver: this.coDriverTimer > 0 ? this.coDriverText : '',
-      coDriverUrgent: this.coDriverUrgent,
       conditions: `${this.conditions.biome.label} · ${WEATHER_LABEL[this.conditions.weather]} · ${TIME_LABEL[this.timeNow()]}`,
       camera: this.cameraMode,
       standings: this.standings(),
@@ -627,42 +611,6 @@ export class RallyGame {
   private standings(): { name: string; player: boolean }[] {
     const all = [{ name: this.driver.name, player: true, d: this.trackDistance }, ...this.rivals.map(r => ({ name: r.name, player: false, d: r.distance }))]
     return all.sort((a, b) => b.d - a.d).map(({ name, player }) => ({ name, player }))
-  }
-
-  private say(text: string, _spoken: string, urgent = false): void {
-    this.coDriverText = text
-    this.coDriverTimer = 3.2
-    this.coDriverUrgent = urgent
-  }
-
-  /** Read the next corner 50–170 m ahead, once per lap. */
-  private updateCoDriver(): void {
-    const lap = Math.floor(this.trackDistance / this.track.length) + 1
-    if (lap > this.lastLapAnnounced && lap <= this.stageLaps) {
-      this.lastLapAnnounced = lap
-      this.say(lap === this.stageLaps ? 'اللفة الأخيرة! ادفع بكل قوتك' : `اللفة ${lap}`, lap === this.stageLaps ? 'اللفة الأخيرة' : `اللفة ${lap}`)
-      return
-    }
-    if (this.coDriverTimer > 1.4) return
-    const L = this.track.length
-    const here = ((this.trackDistance % L) + L) % L
-    for (let i = 0; i < this.track.paceNotes.length; i += 1) {
-      const note = this.track.paceNotes[i]
-      const ahead = (note.distance - here + L) % L
-      const key = `${lap}:${i}`
-      const dir = note.direction === 'left' ? 'يسار' : 'يمين'
-      const phase = paceNotePhase(ahead)
-      if (phase === 'prepare' && !this.announced.has(`${key}:prepare`)) {
-        this.announced.add(`${key}:prepare`)
-        this.say(`استعد · ${describeNote(note, ahead)}`, `استعد ${dir} ${note.grade}`)
-        return
-      }
-      if (phase === 'call' && !this.announced.has(`${key}:call`)) {
-        this.announced.add(`${key}:call`)
-        this.say(describeNote(note, ahead), `${dir} ${note.grade}${note.grade <= 2 ? '، اكبح' : ''}`, note.grade <= 2)
-        return
-      }
-    }
   }
 
   private updateCamera(sample: { position: THREE.Vector3; tangent: THREE.Vector3; side: THREE.Vector3 }, frameSeconds: number): void {

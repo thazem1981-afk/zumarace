@@ -231,15 +231,6 @@ export async function boot(): Promise<void> {
     window.addEventListener('resize', () => g.resize(window.innerWidth, window.innerHeight))
     g.resize(window.innerWidth, window.innerHeight)
     input.endFrame()
-    // Browsers block automatic speech/audio. The first real interaction unlocks a single welcome greeting.
-    const welcomeOnce = () => {
-      audio.unlock()
-      audio.playWelcome()
-      window.removeEventListener('pointerdown', welcomeOnce, true)
-      window.removeEventListener('keydown', welcomeOnce, true)
-    }
-    window.addEventListener('pointerdown', welcomeOnce, { once: true, capture: true })
-    window.addEventListener('keydown', welcomeOnce, { once: true, capture: true })
     ui.setBootProgress(1)
     window.setTimeout(() => ui.showTitle(), 160)
     ;(window as unknown as { __game: unknown }).__game = { game: g, ui, input, save }
