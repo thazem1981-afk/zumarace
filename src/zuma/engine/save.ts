@@ -26,7 +26,7 @@ export type SaveData = {
   driver: DriverId
   garage: Garage
   cameraMode: CameraMode
-  coDriverVoice: boolean
+  engineSound: boolean
 }
 
 export type ScoreEntry = { name: string; score: number; seconds: number; at: number }
@@ -53,7 +53,7 @@ export function defaultSave(): SaveData {
     driver: 'salem',
     garage: {},
     cameraMode: 'chase',
-    coDriverVoice: true,
+    engineSound: true,
   }
 }
 
@@ -144,7 +144,7 @@ export function parseSave(raw: string | null): SaveData {
     driver: data.driver === 'layla' || data.driver === 'karim' || data.driver === 'salem' ? data.driver : base.driver,
     garage: parseGarage(data.garage, VALID_CAR_IDS),
     cameraMode: CAMERA_MODES.includes(data.cameraMode as CameraMode) ? data.cameraMode as CameraMode : base.cameraMode,
-    coDriverVoice: data.coDriverVoice !== false,
+    engineSound: data.engineSound !== false,
   }
 }
 
