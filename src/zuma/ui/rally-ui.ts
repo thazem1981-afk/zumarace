@@ -184,6 +184,14 @@ export class RallyUi {
       co.classList.toggle('is-urgent', hud.coDriverUrgent)
       this.text('[data-slot="codriver-text"]', hud.coDriver)
     }
+    const voiceButton = this.root.querySelector<HTMLButtonElement>('[data-action="voice-toggle"]')
+    if (voiceButton) {
+      const enabled = this.save.data.coDriverVoice
+      voiceButton.textContent = enabled ? '🔊' : '🔇'
+      voiceButton.setAttribute('aria-pressed', String(enabled))
+      voiceButton.setAttribute('aria-label', enabled ? 'إيقاف صوت مساعد السباق' : 'تشغيل صوت مساعد السباق')
+      voiceButton.title = enabled ? 'إيقاف صوت مساعد السباق' : 'تشغيل صوت مساعد السباق'
+    }
     this.text('[data-slot="hud-conditions"]', hud.conditions)
     this.text('[data-slot="hud-camera"]', `🎥 ${CAMERA_LABEL[hud.camera] ?? ''}`)
     const list = this.root.querySelector<HTMLElement>('.standings')
@@ -370,6 +378,9 @@ export class RallyUi {
       }
       case 'driver': if (target.dataset.driver) { this.actions.setDriver(target.dataset.driver as DriverId); this.showGarage() } break
       case 'camera': this.actions.cycleCamera(); break
+      case 'voice-toggle':
+        this.actions.settings({ coDriverVoice: !this.save.data.coDriverVoice })
+        break
       case 'paint': case 'rim': case 'livery': case 'spoiler': case 'number': {
         const id = this.save.data.raceProgress.selectedCar
         const v = target.dataset.value ?? ''
@@ -466,17 +477,17 @@ export class RallyUi {
   </div>
 </section>
 <section class="screen screen-hud" data-screen="hud">
-  <div class="hud-top"><div class="hud-panel stage-panel"><span class="hud-symbol">✦</span><div><b data-slot="hud-stage">المرحلة 1</b><small data-slot="hud-lap">اللفة 1/2</small></div></div><div class="race-position"><b data-slot="hud-position">المركز 1/7</b><small data-slot="hud-time">00:00</small><small class="hud-impacts" data-slot="hud-impacts">اصطدامات ٠/٥</small></div><div class="hud-right"><div class="hud-coins"><span aria-hidden="true">Z</span><b data-slot="hud-coins">0</b></div><button class="hud-camera" data-action="camera" aria-label="تبديل الكاميرا" data-slot="hud-camera">🎥</button><button class="hud-pause" data-action="pause" data-i18n-label="touch.pause" aria-label="توقف مؤقت">Ⅱ</button></div></div>
+  <div class="hud-top"><div class="hud-panel stage-panel"><span class="hud-symbol">✦</span><div><b data-slot="hud-stage">المرحلة 1</b><small data-slot="hud-lap">اللفة 1/2</small></div></div><div class="race-position"><b data-slot="hud-position">المركز 1/7</b><small data-slot="hud-time">00:00</small><small class="hud-impacts" data-slot="hud-impacts">اصطدامات ٠/٥</small></div><div class="hud-right"><div class="hud-coins"><span aria-hidden="true">Z</span><b data-slot="hud-coins">0</b></div><button class="hud-camera" data-action="camera" aria-label="تبديل الكاميرا" data-slot="hud-camera">🎥</button><button class="hud-voice" data-action="voice-toggle" aria-label="إيقاف صوت مساعد السباق" aria-pressed="true" title="إيقاف صوت مساعد السباق">🔊</button><button class="hud-pause" data-action="pause" data-i18n-label="touch.pause" aria-label="توقف مؤقت">Ⅱ</button></div></div>
   <div class="hud-conditions" data-slot="hud-conditions"></div>
   <ol class="standings"></ol>
-  <div class="codriver" role="status"><img src="${mazenImg}" alt="" width="44" height="44"><div><small>${CO_DRIVER.name}</small><b data-slot="codriver-text"></b></div></div>
+  <div class="codriver" role="status"><div><small>مساعد السباق</small><b data-slot="codriver-text"></b></div></div>
   <div class="speed-gauge"><div class="speed-readout"><strong data-slot="hud-speed">0</strong><small data-i18n="hud.speed"></small></div></div>
   <div class="turbo-box"><div><span data-i18n="hud.turbo"></span><b data-slot="turbo-percent">0%</b></div><small data-slot="turbo-name"></small><div class="turbo-meter"><i class="turbo-fill"></i></div></div>
   <div class="race-signal" aria-live="assertive" aria-hidden="true"></div><div class="hud-impact-reset" role="status" data-i18n="hud.impactReset"></div><div class="hud-warning" data-i18n="hud.crash"></div><div class="hud-drift" data-i18n="hud.drift"></div>
   <div class="touch"><div class="touch-stick"><i></i><span><span data-i18n="touch.steering"></span><br><span data-i18n="touch.acceleration"></span></span></div><button class="touch-btn touch-gas" data-touch="throttle"><b>▲</b><span data-i18n="touch.gas"></span></button><button class="touch-btn touch-brake" data-touch="brake"><b>▼</b><span data-i18n="touch.brake"></span></button><button class="touch-btn touch-turbo" data-touch="turbo" data-i18n-label="touch.turboLocked" aria-label="تيربو مقفل"><b>⚡</b><span data-i18n="touch.turbo"></span></button></div>
 </section>
 <section class="screen screen-modal" data-screen="pause"><div class="modal-card"><p class="eyebrow" data-i18n="game.title"></p><h2 data-i18n="pause.title"></h2><nav class="menu"><button data-nav class="btn btn-primary" data-action="resume"><span data-i18n="menu.resume"></span></button><button data-nav class="btn" data-action="restart"><span data-i18n="menu.restart"></span></button><button data-nav class="btn" data-action="garage"><span data-i18n="menu.garage"></span></button><button data-nav class="btn" data-action="settings"><span data-i18n="menu.settings"></span></button><button data-nav class="btn btn-quiet" data-action="quit"><span data-i18n="menu.quit"></span></button></nav></div></section>
-<section class="screen screen-modal" data-screen="settings"><div class="modal-card settings-card"><header class="panel-heading"><button data-nav class="icon-btn" data-action="back" aria-label="رجوع">‹</button><h2 data-i18n="settings.title"></h2></header><fieldset><legend data-i18n="settings.audio"></legend>${range('musicVolume', 'settings.music', 0, 1, 0.05)}${range('sfxVolume', 'settings.sfxVolume', 0, 1, 0.05)}${toggle('muted', 'settings.mute')}</fieldset><fieldset><legend data-i18n="settings.controls"></legend>${range('sensitivity', 'settings.sensitivity', 0.5, 1.8, 0.1)}</fieldset><fieldset><legend data-i18n="settings.display"></legend><div class="setting-row"><span data-i18n="settings.quality"></span><div class="quality-segment"><button data-nav class="quality-choice" data-value="low" data-i18n="settings.low"></button><button data-nav class="quality-choice" data-value="medium" data-i18n="settings.medium"></button><button data-nav class="quality-choice" data-value="high" data-i18n="settings.high"></button></div></div>${toggle('reducedMotion', 'settings.reduceMotion')}</fieldset><fieldset><legend>الملّاح</legend>${toggle('coDriverVoice', 'settings.coDriverVoice')}</fieldset></div></section>
+<section class="screen screen-modal" data-screen="settings"><div class="modal-card settings-card"><header class="panel-heading"><button data-nav class="icon-btn" data-action="back" aria-label="رجوع">‹</button><h2 data-i18n="settings.title"></h2></header><fieldset><legend data-i18n="settings.audio"></legend>${range('musicVolume', 'settings.music', 0, 1, 0.05)}${range('sfxVolume', 'settings.sfxVolume', 0, 1, 0.05)}${toggle('muted', 'settings.mute')}</fieldset><fieldset><legend data-i18n="settings.controls"></legend>${range('sensitivity', 'settings.sensitivity', 0.5, 1.8, 0.1)}</fieldset><fieldset><legend data-i18n="settings.display"></legend><div class="setting-row"><span data-i18n="settings.quality"></span><div class="quality-segment"><button data-nav class="quality-choice" data-value="low" data-i18n="settings.low"></button><button data-nav class="quality-choice" data-value="medium" data-i18n="settings.medium"></button><button data-nav class="quality-choice" data-value="high" data-i18n="settings.high"></button></div></div>${toggle('reducedMotion', 'settings.reduceMotion')}</fieldset><fieldset><legend>الصوت</legend>${toggle('coDriverVoice', 'settings.coDriverVoice')}</fieldset></div></section>
 <section class="screen screen-modal screen-results" data-screen="results"><div class="modal-card results-panel"><div class="results-emblem">🏁</div><p class="eyebrow" data-slot="results-stage"></p><h2 class="results-title"></h2><div class="results-grid"><div><span data-i18n="results.time"></span><b data-slot="results-time"></b></div><div><span data-i18n="results.reward"></span><b data-slot="results-reward"></b></div><div><span data-i18n="results.balance"></span><b data-slot="results-coins"></b></div></div><p class="results-unranked" data-i18n="results.unranked"></p><nav class="menu"><button data-nav class="btn btn-primary" data-action="next"><span data-i18n="menu.next"></span></button><button data-nav class="btn" data-action="restart"><span data-i18n="results.retry"></span></button><button data-nav class="btn" data-action="campaign"><span data-i18n="results.map"></span></button><button data-nav class="btn btn-quiet" data-action="quit"><span data-i18n="results.home"></span></button></nav></div></section>`
   }
 }
