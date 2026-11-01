@@ -7,7 +7,7 @@ import { CONFIG } from './config'
 import { RallyTrack, type TrackHazard } from './rally-track'
 import { tuning } from './tuning'
 import { Atmosphere } from './atmosphere'
-import { conditionsForStage, SURFACE_DRAG, TIME_LABEL, WEATHER_GRIP, WEATHER_LABEL, type StageConditions } from './environment'
+import { conditionsForStage, gripForConditions, SURFACE_DRAG, TIME_LABEL, WEATHER_LABEL, type StageConditions } from './environment'
 import { buildRealisticCar } from './vehicle'
 import { DEFAULT_LOOK, lookFor, type CarLook, type Garage } from './customization'
 import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './characters'
@@ -391,8 +391,8 @@ export class RallyGame {
 
     const weather = this.conditions.weather
     const slippery = weather === 'rain' || weather === 'snow'
-    const weatherGrip = 1 - (1 - WEATHER_GRIP[weather]) * this.atmosphere.intensity
-    const tireScale = (0.8 + this.car.grip * 0.04 + this.progress.tireUpgrade * 0.075) * ability.grip * weatherGrip * (slippery ? this.driver.wetGrip : 1)
+    const surfaceGrip = gripForConditions(this.conditions.biome.surface, weather, this.atmosphere.intensity)
+    const tireScale = (0.8 + this.car.grip * 0.04 + this.progress.tireUpgrade * 0.075) * ability.grip * surfaceGrip * (slippery ? this.driver.wetGrip : 1)
     const steer = -this.input.move.x * this.input.sensitivity
     this.previousPlayerLane = this.laneOffset
     this.lateralVelocity = advanceLateralMotion({
@@ -459,9 +459,11 @@ export class RallyGame {
     } else {
       const dt = Math.max(0, frameSeconds)
       const activeDrive = this.mode === 'playing' && !this.reducedMotion
-      const targetPitch = activeDrive ? THREE.MathUtils.clamp(-this.longitudinalAccel * 0.004, -0.08, 0.08) : 0
+      // Chassis weight transfer: braking loads the nose, throttle lifts it, and cornering loads the outside tyres.
+      const targetPitch = activeDrive ? THREE.MathUtils.clamp(-this.longitudinalAccel * 0.0052, -0.12, 0.12) : 0
       const lateralRatio = this.lateralVelocity / Math.max(8, Math.abs(this.speed))
-      const targetRoll = activeDrive ? THREE.MathUtils.clamp(-this.steerInput * 0.035 - lateralRatio * 0.06, -0.1, 0.1) : 0
+      const cornerLoad = this.steerInput * Math.min(1, Math.abs(this.speed) / 24)
+      const targetRoll = activeDrive ? THREE.MathUtils.clamp(-cornerLoad * 0.052 - lateralRatio * (this.driftActive ? 0.075 : 0.045), -0.13, 0.13) : 0
       const targetYaw = activeDrive ? THREE.MathUtils.clamp(this.steerInput * 0.045 + Math.atan2(this.lateralVelocity, Math.max(8, Math.abs(this.speed))) * 0.16, -0.12, 0.12) : 0
       this.bodyPitch = THREE.MathUtils.damp(this.bodyPitch, targetPitch, 8, dt)
       this.bodyYaw = THREE.MathUtils.damp(this.bodyYaw, targetYaw, 8, dt)
@@ -573,7 +575,8 @@ export class RallyGame {
     this.body.visible = true
     if (mode === 'chase' || mode === 'far') {
       const far = mode === 'far'
-      desired.copy(sample.position).addScaledVector(sample.tangent, -(CONFIG.camera.distance + (far ? 11 : 4))).add(new THREE.Vector3(0, CONFIG.camera.height + (far ? 6 : 3), 0))
+      const speedBlend = Math.min(1, Math.abs(this.speed) / CONFIG.race.maxSpeed)
+      desired.copy(sample.position).addScaledVector(sample.tangent, -(CONFIG.camera.distance + (far ? 11 : 4) + speedBlend * 3.5)).add(new THREE.Vector3(0, CONFIG.camera.height + (far ? 6 : 3) + speedBlend * 1.2, 0))
       target.copy(sample.position).addScaledVector(sample.tangent, far ? 9 : 5).add(new THREE.Vector3(0, 1.7, 0))
     } else if (mode === 'hood' || mode === 'bumper') {
       const hood = mode === 'hood'
@@ -607,7 +610,7 @@ export class RallyGame {
       this.camera.userData.ready = true
     } else this.camera.position.lerp(desired, 1 - Math.exp(-follow * frameSeconds))
     this.camera.lookAt(target)
-    const fov = CONFIG.camera.fov + fovBoost + (this.reducedMotion ? 0 : this.nitroEffect * 4.5) + (mode === 'tv' ? -18 : 0)
+    const fov = CONFIG.camera.fov + fovBoost + (this.reducedMotion ? 0 : Math.min(3.5, Math.abs(this.speed) / CONFIG.race.maxSpeed * 3.5) + this.nitroEffect * 4.5) + (mode === 'tv' ? -18 : 0)
     if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix() }
     if (!this.reducedMotion && this.mode === 'playing' && mode !== 'tv') {
       this.camera.rotateZ(this.steerInput * 0.014 + (this.driftActive ? Math.sign(this.lateralVelocity) * 0.01 : 0))
