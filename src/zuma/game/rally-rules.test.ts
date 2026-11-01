@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BIOME_ORDER, biomeForStage, conditionsForStage, WEATHER_GRIP } from './environment'
+import { BIOME_ORDER, biomeForStage, conditionsForStage, WEATHER_GRIP, windForWeather } from './environment'
 import { CAMPAIGN_CARS, CAMPAIGN_STAGES } from './campaign'
 import { buildPaceNotes, gradeFor, turnAngle } from './pace-notes'
 import { lookFor, parseGarage } from './customization'
@@ -23,6 +23,11 @@ describe('stage variety', () => {
       const c = conditionsForStage(s)
       if (c.weather === 'snow') expect(c.biome.id).toBe('snow')
     }
+  })
+  it('weather wind is deterministic and has stronger gusts in sandstorms', () => {
+    expect(windForWeather('rain', 12)).toEqual(windForWeather('rain', 12))
+    expect(Math.abs(windForWeather('sandstorm', 2).x)).toBeGreaterThan(Math.abs(windForWeather('rain', 2).x))
+    expect(windForWeather('clear', 20)).toEqual({ x: 0, z: 0 })
   })
   it('rain and snow reduce grip', () => {
     expect(WEATHER_GRIP.rain).toBeLessThan(1)
