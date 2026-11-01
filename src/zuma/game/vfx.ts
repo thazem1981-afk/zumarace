@@ -64,7 +64,14 @@ export class ParticlePool {
     g.attributes.psize.needsUpdate = true
   }
 
-  clear(): void { this.life.fill(0) }
+  clear(): void {
+    this.next = 0
+    this.life.fill(0)
+    this.col.fill(0)
+    this.size.fill(0)
+    this.points.geometry.attributes.color.needsUpdate = true
+    this.points.geometry.attributes.psize.needsUpdate = true
+  }
 }
 
 /** Ring buffer of flat quads that leaves tyre marks while drifting or braking hard. */
@@ -98,6 +105,7 @@ export class SkidMarks {
   }
 
   clear(): void {
+    this.next = 0
     this.dummy.scale.set(0, 0, 0)
     this.dummy.updateMatrix()
     for (let i = 0; i < this.count; i += 1) this.mesh.setMatrixAt(i, this.dummy.matrix)
