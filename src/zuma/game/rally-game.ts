@@ -531,6 +531,11 @@ export class RallyGame {
     return all.sort((a, b) => b.d - a.d).map(({ name, player }) => ({ name, player }))
   }
 
+  setCoDriverVoice(enabled: boolean): void {
+    this.coDriverVoice = enabled
+    if (!enabled && typeof speechSynthesis !== 'undefined') speechSynthesis.cancel()
+  }
+
   private say(text: string, spoken: string, urgent = false): void {
     this.coDriverText = text
     this.coDriverTimer = 3.2
