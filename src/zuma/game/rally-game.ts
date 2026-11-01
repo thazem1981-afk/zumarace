@@ -649,7 +649,7 @@ export class RallyGame {
     const emitFor = (pos: THREE.Vector3, fwd: THREE.Vector3, speed: number, slide: number, rate: number) => {
       const s = Math.abs(speed)
       if (s < 4 || (!loose && !wet && slide < 1.5)) return
-      const n = rate * (s / CONFIG.race.maxSpeed) * (loose ? 1 : 0.5) * (this.reducedMotion ? 0.12 : 1) + slide * 0.12
+      const n = (rate * (s / CONFIG.race.maxSpeed) * (loose ? 1 : 0.5) + slide * 0.12) * (this.reducedMotion ? 0.12 : 1)
       let count = Math.floor(n)
       if (Math.random() < n - count) count += 1
       const side = new THREE.Vector3(fwd.z, 0, -fwd.x)
