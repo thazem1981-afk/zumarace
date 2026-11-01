@@ -124,6 +124,16 @@ describe('procedural rally routes', () => {
     expect(first.every(p => Number.isFinite(p.x) && Number.isFinite(p.z))).toBe(true)
   })
 
+  it('includes the new narrow switchback course in the stage rotation', () => {
+    const switchback = buildStageRoutePoints(12)
+    const previous = buildStageRoutePoints(11)
+    expect(switchback).toHaveLength(56)
+    expect(switchback.map(p => p.toArray())).not.toEqual(previous.map(p => p.toArray()))
+    const xSpan = Math.max(...switchback.map(p => p.x)) - Math.min(...switchback.map(p => p.x))
+    const zSpan = Math.max(...switchback.map(p => p.z)) - Math.min(...switchback.map(p => p.z))
+    expect(zSpan).toBeGreaterThan(xSpan)
+  })
+
   it('changes course geometry between stages', () => {
     const first = buildStageRoutePoints(12)
     const next = buildStageRoutePoints(13)
