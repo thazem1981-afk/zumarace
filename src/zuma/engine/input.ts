@@ -121,7 +121,6 @@ export class Input {
       if (pad.index !== this.padIndex || pad.id !== this.padId) this.padPrev = []
       this.padIndex = pad.index
       this.padId = pad.id
-      const dead = (v: number) => Math.abs(v) < 0.16 ? 0 : Math.sign(v) * ((Math.abs(v) - 0.16) / 0.84)
       const stick = shapeAnalogStick(pad.axes[0] ?? 0, pad.axes[1] ?? 0)
       const lx = stick.x
       const ly = stick.y
