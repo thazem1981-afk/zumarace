@@ -257,13 +257,17 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
     spin.name = `wheel-${z > 0 ? 'front' : 'rear'}-${x}`
     const t = new THREE.Mesh(tireGeo, tire); t.castShadow = true
     spin.add(t)
+    const treadInstances = new THREE.InstancedMesh(treadGeo, tire, 14)
+    const wheelPart = new THREE.Object3D()
     for (let k = 0; k < 14; k += 1) {
-      const tr = new THREE.Mesh(treadGeo, tire)
       const a = (k / 14) * Math.PI * 2
-      tr.position.set(0, Math.cos(a) * r, Math.sin(a) * r)
-      tr.rotation.x = -a
-      spin.add(tr)
+      wheelPart.position.set(0, Math.cos(a) * r, Math.sin(a) * r)
+      wheelPart.rotation.set(-a, 0, 0)
+      wheelPart.updateMatrix()
+      treadInstances.setMatrixAt(k, wheelPart.matrix)
     }
+    treadInstances.instanceMatrix.needsUpdate = true
+    spin.add(treadInstances)
     const rm = new THREE.Mesh(rimGeo, rim); rm.name = 'alloy-rim'; spin.add(rm)
     // Ventilated brake rotors and five individual spokes make the wheel read as a real assembly.
     for (const side of [-1, 1]) {
@@ -278,21 +282,28 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
       clamp.position.set(side * 0.15, r * 0.18, -r * 0.28)
       clamp.name = 'brake-caliper'
       spin.add(clamp)
+      const lugs = new THREE.InstancedMesh(lugGeo, alloy, 5)
       for (let lug = 0; lug < 5; lug += 1) {
         const a = (lug / 5) * Math.PI * 2
-        const nut = new THREE.Mesh(lugGeo, alloy)
-        nut.position.set(side * 0.19, Math.cos(a) * r * 0.19, Math.sin(a) * r * 0.19)
-        spin.add(nut)
+        wheelPart.position.set(side * 0.19, Math.cos(a) * r * 0.19, Math.sin(a) * r * 0.19)
+        wheelPart.rotation.set(0, 0, 0)
+        wheelPart.updateMatrix()
+        lugs.setMatrixAt(lug, wheelPart.matrix)
       }
+      lugs.instanceMatrix.needsUpdate = true
+      spin.add(lugs)
     }
+    const spokes = new THREE.InstancedMesh(spokeGeo, rim, 5)
     for (let k = 0; k < 5; k += 1) {
       const a = (k / 5) * Math.PI * 2
-      const spoke = new THREE.Mesh(spokeGeo, rim)
-      spoke.position.set(0, Math.cos(a) * r * 0.31, Math.sin(a) * r * 0.31)
-      spoke.rotation.x = -a
-      spoke.name = 'alloy-spoke'
-      spin.add(spoke)
+      wheelPart.position.set(0, Math.cos(a) * r * 0.31, Math.sin(a) * r * 0.31)
+      wheelPart.rotation.set(-a, 0, 0)
+      wheelPart.updateMatrix()
+      spokes.setMatrixAt(k, wheelPart.matrix)
     }
+    spokes.name = 'alloy-spokes'
+    spokes.instanceMatrix.needsUpdate = true
+    spin.add(spokes)
     axle.add(spin)
     vehicle.add(axle)
     wheelAxles.push(axle)
