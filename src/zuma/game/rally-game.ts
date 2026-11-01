@@ -379,7 +379,7 @@ export class RallyGame {
   get stageConditions(): StageConditions { return this.conditions }
 
   cycleCamera(): CameraMode {
-    const modes: CameraMode[] = ['chase', 'far', 'hood', 'bumper', 'tv']
+    const modes: CameraMode[] = ['chase', 'far', 'hood', 'bumper', 'tv', 'photo']
     this.cameraMode = modes[(modes.indexOf(this.cameraMode) + 1) % modes.length]
     this.camera.userData.ready = false
     return this.cameraMode
@@ -697,6 +697,13 @@ export class RallyGame {
       target.copy(car).addScaledVector(h, 30).add(new THREE.Vector3(0, hood ? 1.1 : 0.9, 0))
       follow = 60
       fovBoost = 6
+    } else if (mode === 'photo') {
+      // A clean orbiting showcase camera for cinematic screenshots.
+      const orbit = this.time * 0.22
+      desired.copy(car).add(new THREE.Vector3(Math.sin(orbit) * 13, 5.2 + Math.sin(this.time * 0.35) * 0.65, Math.cos(orbit) * 13))
+      target.copy(car).add(new THREE.Vector3(0, 1.05, 0))
+      follow = 4.5
+      fovBoost = -5
     } else {
       // Trackside TV cameras: jump between fixed posts as the car passes them.
       const spacing = 140
@@ -714,7 +721,7 @@ export class RallyGame {
     this.camera.lookAt(target)
     const fov = CONFIG.camera.fov + fovBoost + (this.reducedMotion ? 0 : Math.min(3.5, Math.abs(this.speed) / CONFIG.race.maxSpeed * 3.5) + this.nitroEffect * 4.5) + (mode === 'tv' ? -18 : 0)
     if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix() }
-    if (!this.reducedMotion && this.mode === 'playing' && mode !== 'tv') {
+    if (!this.reducedMotion && this.mode === 'playing' && mode !== 'tv' && mode !== 'photo') {
       this.camera.rotateZ(this.steerInput * 0.014 + (this.driftActive ? Math.sign(this.lateralVelocity) * 0.01 : 0))
       // Loose surfaces shake the cockpit views a little with speed.
       const loose = this.conditions.biome.surface !== 'tarmac'
