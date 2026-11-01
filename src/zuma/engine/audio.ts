@@ -10,15 +10,12 @@ export type Sfx = 'pickup' | 'jump' | 'land' | 'hurt' | 'ui' | 'win' | 'lose' | 
 export class Audio {
   readonly ctx: AudioContext
   private master: GainNode
-  private music: GainNode
-  private sfx: GainNode
+    private sfx: GainNode
   private engineBus: GainNode
   private engineGain?: GainNode
   private engineFilter?: BiquadFilterNode
   private engineOscillators: OscillatorNode[] = []
   private engineSoundEnabled = true
-  private musicTimer = 0
-  private musicOn = false
   private muted = false
   private sfxVolume = 0.8
   private buffers = new Map<string, AudioBuffer>()
@@ -26,10 +23,8 @@ export class Audio {
   constructor() {
     this.ctx = new AudioContext()
     this.master = this.ctx.createGain()
-    this.music = this.ctx.createGain()
     this.sfx = this.ctx.createGain()
     this.engineBus = this.ctx.createGain()
-    this.music.connect(this.master)
     this.sfx.connect(this.master)
     this.engineBus.connect(this.master)
     this.master.connect(this.ctx.destination)
@@ -40,11 +35,10 @@ export class Audio {
   }
 
   /** Volumes in 0..1. */
-  setVolumes(music: number, sfx: number, muted = false): void {
+  setVolumes(sfx: number, muted = false): void {
     this.muted = muted
     this.sfxVolume = Math.max(0, Math.min(1, sfx))
     const t = this.ctx.currentTime
-    this.music.gain.setTargetAtTime(muted ? 0 : music * 0.55, t, 0.05)
     this.sfx.gain.setTargetAtTime(muted ? 0 : sfx * 0.8, t, 0.05)
     this.engineBus.gain.setTargetAtTime(muted ? 0 : sfx * 0.48, t, 0.05)
   }
@@ -108,11 +102,11 @@ export class Audio {
     return buffer
   }
 
-  playBuffer(buffer: AudioBuffer, bus: 'music' | 'sfx' = 'sfx', loop = false): AudioBufferSourceNode {
+  playBuffer(buffer: AudioBuffer, loop = false): AudioBufferSourceNode {
     const src = this.ctx.createBufferSource()
     src.buffer = buffer
     src.loop = loop
-    src.connect(bus === 'music' ? this.music : this.sfx)
+    src.connect(this.sfx)
     src.start()
     return src
   }
@@ -147,57 +141,4 @@ export class Audio {
     }
   }
 
-  /** Up-tempo desert-rally synth loop with kick, clap, hats and a bright lead; generated locally. */
-  startMusic(): void {
-    if (this.musicOn) return
-    this.musicOn = true
-    const beat = 60 / 148
-    const tick = beat / 2
-    const bass = [55, 55, 55, 73.42, 73.42, 82.41, 73.42, 65.41, 49, 49, 49, 65.41, 65.41, 73.42, 65.41, 55]
-    const lead = [329.63, 0, 392, 440, 0, 523.25, 440, 392, 293.66, 0, 349.23, 392, 0, 440, 392, 349.23,
-      261.63, 0, 329.63, 392, 0, 440, 392, 329.63, 293.66, 0, 349.23, 440, 0, 523.25, 440, 392]
-    const chords = [[220, 261.63, 329.63], [196, 246.94, 293.66], [164.81, 196, 246.94], [196, 246.94, 293.66]]
-    let step = 0
-    const tone = (frequency: number, end: number, duration: number, type: OscillatorType, volume: number, at: number) => {
-      const oscillator = this.ctx.createOscillator()
-      const gain = this.ctx.createGain()
-      oscillator.type = type
-      oscillator.frequency.setValueAtTime(frequency, at)
-      if (end !== frequency) oscillator.frequency.exponentialRampToValueAtTime(Math.max(end, 20), at + duration)
-      gain.gain.setValueAtTime(0.0001, at)
-      gain.gain.exponentialRampToValueAtTime(volume, at + 0.008)
-      gain.gain.exponentialRampToValueAtTime(0.0001, at + duration)
-      oscillator.connect(gain).connect(this.music)
-      oscillator.start(at)
-      oscillator.stop(at + duration + 0.025)
-    }
-    const schedule = () => {
-      if (!this.musicOn) return
-      const at = this.ctx.currentTime + 0.035
-      const beatStep = step % lead.length
-      const bassNote = bass[Math.floor(beatStep / 2) % bass.length]
-      tone(bassNote, bassNote * 0.98, tick * 0.88, 'sawtooth', 0.075, at)
-      if (step % 2 === 0) tone(154, 42, 0.15, 'sine', 0.24, at)
-      if (step % 4 === 2) {
-        tone(240, 110, 0.1, 'triangle', 0.09, at)
-        tone(1450, 840, 0.055, 'square', 0.035, at + 0.005)
-      }
-      if (lead[beatStep]) {
-        tone(lead[beatStep], lead[beatStep] * 0.995, 0.11, 'square', 0.036, at)
-        tone(lead[beatStep] * 2, lead[beatStep] * 2, 0.065, 'triangle', 0.012, at)
-      }
-      if (step % 2 === 1) tone(5600, 3100, 0.024, 'square', 0.022, at)
-      if (beatStep % 16 === 0) {
-        for (const note of chords[Math.floor(beatStep / 8) % chords.length]) tone(note, note * 0.999, beat * 6, 'triangle', 0.022, at)
-      }
-      step += 1
-      this.musicTimer = window.setTimeout(schedule, tick * 1000)
-    }
-    schedule()
-  }
-
-  stopMusic(): void {
-    this.musicOn = false
-    clearTimeout(this.musicTimer)
-  }
 }
