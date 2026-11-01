@@ -78,6 +78,7 @@ describe('garage customisation', () => {
     const s = parseSave(JSON.stringify({ version: 2, cameraMode: 'hood', driver: 'layla' }))
     expect(s.cameraMode).toBe('hood')
     expect(s.driver).toBe('layla')
+    expect(parseSave(JSON.stringify({ version: 2, cameraMode: 'photo' })).cameraMode).toBe('photo')
   })
   it('defaults engine sound on and persists the mute choice', () => {
     expect(parseSave(null).engineSound).toBe(true)
