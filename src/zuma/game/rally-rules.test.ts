@@ -69,6 +69,10 @@ describe('garage customisation', () => {
     expect(s.cameraMode).toBe('hood')
     expect(s.driver).toBe('layla')
   })
+  it('defaults engine sound on and persists the mute choice', () => {
+    expect(parseSave(null).engineSound).toBe(true)
+    expect(parseSave(JSON.stringify({ version: 2, engineSound: false })).engineSound).toBe(false)
+  })
 })
 
 describe('rally lateral handling', () => {
