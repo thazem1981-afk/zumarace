@@ -1,5 +1,6 @@
 import type { DriverId } from '../game/characters'
 import { parseGarage, type Garage } from '../game/customization'
+import type { TransmissionMode } from '../game/transmission'
 import { CAMPAIGN_CARS, TURBO_TYPES, defaultRaceProgress, type CarId, type RaceProgress, type TurboTypeId } from '../game/campaign'
 
 export type Locale = 'ar'
@@ -27,6 +28,7 @@ export type SaveData = {
   garage: Garage
   cameraMode: CameraMode
   engineSound: boolean
+  transmission: TransmissionMode
 }
 
 export type ScoreEntry = { name: string; score: number; seconds: number; at: number }
@@ -54,6 +56,7 @@ export function defaultSave(): SaveData {
     garage: {},
     cameraMode: 'chase',
     engineSound: true,
+    transmission: 'automatic',
   }
 }
 
@@ -145,6 +148,7 @@ export function parseSave(raw: string | null): SaveData {
     garage: parseGarage(data.garage, VALID_CAR_IDS),
     cameraMode: CAMERA_MODES.includes(data.cameraMode as CameraMode) ? data.cameraMode as CameraMode : base.cameraMode,
     engineSound: data.engineSound !== false,
+    transmission: data.transmission === 'manual' ? 'manual' : 'automatic',
   }
 }
 
