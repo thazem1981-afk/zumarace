@@ -14,11 +14,11 @@ import { ParticlePool, SkidMarks } from './vfx'
 
 describe('custom garage paint', () => {
   it('accepts custom six-digit paint and rim colours and rejects invalid values', () => {
-    const parsed = parseGarage({ buggy: { paint: '#123abc', rim: '#abcdef' }, coupe: { paint: 'red', rim: '#12' } }, new Set(CAMPAIGN_CARS.map(car => car.id)))
-    expect(parsed.buggy?.paint).toBe('#123abc')
-    expect(parsed.buggy?.rim).toBe('#abcdef')
-    expect(parsed.coupe?.paint).toBeNull()
-    expect(parsed.coupe?.rim).toBe('#aeb5b9')
+    const parsed = parseGarage({ 'dune-runner': { paint: '#123abc', rim: '#abcdef' }, 'sand-hawk': { paint: 'red', rim: '#12' } }, new Set(CAMPAIGN_CARS.map(car => car.id)))
+    expect(parsed['dune-runner']?.paint).toBe('#123abc')
+    expect(parsed['dune-runner']?.rim).toBe('#abcdef')
+    expect(parsed['sand-hawk']?.paint).toBeNull()
+    expect(parsed['sand-hawk']?.rim).toBe('#aeb5b9')
   })
 })
 
