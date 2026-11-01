@@ -12,6 +12,11 @@ export class Audio {
   private master: GainNode
   private music: GainNode
   private sfx: GainNode
+  private engineBus: GainNode
+  private engineGain?: GainNode
+  private engineFilter?: BiquadFilterNode
+  private engineOscillators: OscillatorNode[] = []
+  private engineSoundEnabled = true
   private musicTimer = 0
   private musicOn = false
   private buffers = new Map<string, AudioBuffer>()
@@ -21,8 +26,10 @@ export class Audio {
     this.master = this.ctx.createGain()
     this.music = this.ctx.createGain()
     this.sfx = this.ctx.createGain()
+    this.engineBus = this.ctx.createGain()
     this.music.connect(this.master)
     this.sfx.connect(this.master)
+    this.engineBus.connect(this.master)
     this.master.connect(this.ctx.destination)
   }
 
@@ -35,6 +42,56 @@ export class Audio {
     const t = this.ctx.currentTime
     this.music.gain.setTargetAtTime(muted ? 0 : music * 0.55, t, 0.05)
     this.sfx.gain.setTargetAtTime(muted ? 0 : sfx * 0.8, t, 0.05)
+    this.engineBus.gain.setTargetAtTime(muted ? 0 : sfx * 0.48, t, 0.05)
+  }
+
+  setEngineSoundEnabled(enabled: boolean): void {
+    this.engineSoundEnabled = enabled
+    if (!enabled) this.updateEngine(0, 0, false, false)
+  }
+
+  /** Smooth, speed-responsive rally engine tone; kept on a separate, mute-aware bus. */
+  updateEngine(speed: number, throttle: number, turbo: boolean, active: boolean): void {
+    const now = this.ctx.currentTime
+    if (!this.engineSoundEnabled || !active || this.ctx.state !== 'running') {
+      this.engineGain?.gain.setTargetAtTime(0.0001, now, 0.08)
+      return
+    }
+
+    if (!this.engineGain || !this.engineFilter) {
+      this.engineGain = this.ctx.createGain()
+      this.engineGain.gain.value = 0.0001
+      this.engineFilter = this.ctx.createBiquadFilter()
+      this.engineFilter.type = 'lowpass'
+      this.engineFilter.Q.value = 0.7
+      this.engineFilter.frequency.value = 520
+      this.engineFilter.connect(this.engineGain).connect(this.engineBus)
+
+      const fundamental = this.ctx.createOscillator()
+      const harmonic = this.ctx.createOscillator()
+      const fundamentalLevel = this.ctx.createGain()
+      const harmonicLevel = this.ctx.createGain()
+      fundamental.type = 'sawtooth'
+      harmonic.type = 'triangle'
+      fundamental.frequency.value = 48
+      harmonic.frequency.value = 96
+      fundamentalLevel.gain.value = 0.72
+      harmonicLevel.gain.value = 0.18
+      fundamental.connect(fundamentalLevel).connect(this.engineFilter)
+      harmonic.connect(harmonicLevel).connect(this.engineFilter)
+      fundamental.start()
+      harmonic.start()
+      this.engineOscillators = [fundamental, harmonic]
+    }
+
+    const safeSpeed = Math.max(0, Math.min(55, speed))
+    const safeThrottle = Math.max(0, Math.min(1, throttle))
+    const rpmTone = 44 + safeSpeed * 2.15 + safeThrottle * 13 + (turbo ? 18 : 0)
+    this.engineOscillators[0]?.frequency.setTargetAtTime(rpmTone, now, 0.06)
+    this.engineOscillators[1]?.frequency.setTargetAtTime(rpmTone * 2.02, now, 0.06)
+    this.engineFilter.frequency.setTargetAtTime(420 + safeSpeed * 17 + (turbo ? 260 : 0), now, 0.08)
+    const level = 0.018 + Math.min(1, safeSpeed / 50) * 0.065 + safeThrottle * 0.018 + (turbo ? 0.018 : 0)
+    this.engineGain.gain.setTargetAtTime(level, now, 0.08)
   }
 
   async load(url: string): Promise<AudioBuffer> {
