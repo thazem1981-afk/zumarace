@@ -779,6 +779,24 @@ export class RallyGame {
       }
       wrapper.userData.tailLamp = tailLamp
     }
+
+    // Imported GLB cars may not expose a headlamp material for stage lighting.
+    // Add a matching pair so their front lenses respond to night and poor weather.
+    if (!wrapper.userData.headLamp) {
+      const headLamp = new THREE.MeshStandardMaterial({
+        color: 0xfff1d0,
+        emissive: 0xffe2a0,
+        emissiveIntensity: 0.6,
+        roughness: 0.2,
+      })
+      for (const x of [-0.66, 0.66]) {
+        const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.13, 0.06), headLamp)
+        lamp.name = 'zuma-fallback-head-lamp'
+        lamp.position.set(x, 0.82, 2.16)
+        wrapper.add(lamp)
+      }
+      wrapper.userData.headLamp = headLamp
+    }
   }
 
   private updateVehicleEffects(body: THREE.Group, speed: number, lateral: number, nitro: number, drifting: boolean, dt: number): void {
