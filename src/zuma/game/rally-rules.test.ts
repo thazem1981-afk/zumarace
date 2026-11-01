@@ -125,8 +125,8 @@ describe('procedural rally routes', () => {
   })
 
   it('includes the new narrow switchback course in the stage rotation', () => {
-    const switchback = buildStageRoutePoints(12)
-    const previous = buildStageRoutePoints(11)
+    const switchback = buildStageRoutePoints(6)
+    const previous = buildStageRoutePoints(5)
     expect(switchback).toHaveLength(56)
     expect(switchback.map(p => p.toArray())).not.toEqual(previous.map(p => p.toArray()))
     const xSpan = Math.max(...switchback.map(p => p.x)) - Math.min(...switchback.map(p => p.x))
