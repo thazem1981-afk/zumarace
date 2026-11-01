@@ -47,7 +47,7 @@ export async function boot(): Promise<void> {
     audio.setVolumes(data.musicVolume, data.sfxVolume, data.muted)
     if (game) {
       game.reducedMotion = data.reducedMotion
-      game.coDriverVoice = data.coDriverVoice
+      game.setCoDriverVoice(data.coDriverVoice)
     }
   }
   let gameRenderer: import('./engine/renderer').Renderer | undefined
