@@ -69,7 +69,7 @@ export class Audio {
   }
 
   /** Smooth, speed-responsive rally engine tone; kept on a separate, mute-aware bus. */
-  updateEngine(speed: number, throttle: number, turbo: boolean, active: boolean): void {
+  updateEngine(speed: number, throttle: number, turbo: boolean, active: boolean, gear = 1): void {
     const now = this.ctx.currentTime
     if (!this.engineSoundEnabled || !active || this.ctx.state !== 'running') {
       this.engineGain?.gain.setTargetAtTime(0.0001, now, 0.08)
@@ -104,7 +104,8 @@ export class Audio {
 
     const safeSpeed = Math.max(0, Math.min(55, speed))
     const safeThrottle = Math.max(0, Math.min(1, throttle))
-    const rpmTone = 44 + safeSpeed * 2.15 + safeThrottle * 13 + (turbo ? 18 : 0)
+    const ratio = [0, 1.9, 1.55, 1.28, 1.08, 0.92, 0.8][Math.max(1, Math.min(6, Math.floor(gear)))]
+    const rpmTone = 44 + safeSpeed * 2.15 * ratio + safeThrottle * 13 + (turbo ? 18 : 0)
     this.engineOscillators[0]?.frequency.setTargetAtTime(rpmTone, now, 0.06)
     this.engineOscillators[1]?.frequency.setTargetAtTime(rpmTone * 2.02, now, 0.06)
     this.engineFilter.frequency.setTargetAtTime(420 + safeSpeed * 17 + (turbo ? 260 : 0), now, 0.08)
