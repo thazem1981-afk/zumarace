@@ -69,14 +69,17 @@ export class TouchControls {
 
     for (const btn of layer.querySelectorAll<HTMLElement>('[data-touch]')) {
       const action = btn.dataset.touch as Action
-      const up = () => {
+      const pointers = new Set<number>()
+      const up = (e: PointerEvent) => {
+        if (!pointers.delete(e.pointerId) || pointers.size > 0) return
         btn.classList.remove('is-down')
         this.input.setTouchButton(action, false)
       }
       btn.addEventListener('pointerdown', e => {
-        if (!this.active()) return
+        if (!this.active() || pointers.has(e.pointerId)) return
         e.preventDefault()
         try { btn.setPointerCapture(e.pointerId) } catch { /* Keep touch usable without pointer capture. */ }
+        pointers.add(e.pointerId)
         btn.classList.add('is-down')
         this.input.setTouchButton(action, true)
       })
