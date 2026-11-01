@@ -4,13 +4,12 @@ import type { Input } from '../engine/input'
 import type { Quality, SaveData, SaveStore } from '../engine/save'
 import { CAMPAIGN_CARS, CAMPAIGN_STAGES, MAX_UPGRADE_LEVEL, TURBO_TYPES, UPGRADE_BASE_COST, type CarId, type UpgradeKind, type RaceProgress, type TurboTypeId } from '../game/campaign'
 import type { RallyHud, RallyResult } from '../game/rally-game'
-import { CO_DRIVER, DRIVERS, driverById, type DriverId } from '../game/characters'
+import { DRIVERS, driverById, type DriverId } from '../game/characters'
 import { LIVERIES, lookFor, PAINT_COLORS, RIM_COLORS, type CarLook, type LiveryId } from '../game/customization'
 import { conditionsForStage, TIME_LABEL, WEATHER_LABEL } from '../game/environment'
 import salemImg from '../../assets/driver-salem.jpg'
 import laylaImg from '../../assets/driver-layla.jpg'
 import karimImg from '../../assets/driver-karim.jpg'
-import mazenImg from '../../assets/codriver-mazen.jpg'
 
 const PORTRAITS: Record<DriverId, string> = { salem: salemImg, layla: laylaImg, karim: karimImg }
 const CAMERA_LABEL: Record<string, string> = { chase: 'مطاردة', far: 'مطاردة بعيدة', hood: 'قمرة القيادة', bumper: 'المصد', tv: 'تلفزيونية', photo: 'تصوير سينمائي' }
@@ -119,7 +118,6 @@ export class RallyUi {
       <div class="cond-chips"><span>${escapeHtml(c.biome.label)}</span><span>${WEATHER_ICON[c.weather]} ${escapeHtml(WEATHER_LABEL[c.weather])}</span><span>${escapeHtml(TIME_LABEL[c.time])}</span></div>`
     const crew = this.root.querySelector<HTMLElement>('[data-slot="home-crew"]')!
     crew.innerHTML = `<div class="crew-person"><img src="${PORTRAITS[driver.id]}" alt="" width="64" height="64"><div><small>السائق</small><b>${escapeHtml(driver.name)}</b><em>${escapeHtml(driver.perk)}</em></div></div>
-      <div class="crew-person"><img src="${mazenImg}" alt="" width="64" height="64"><div><small>${escapeHtml(CO_DRIVER.role)}</small><b>${escapeHtml(CO_DRIVER.name)}</b></div></div>
       <div class="crew-car"><small>السيارة</small><b>${escapeHtml(car.name)}</b></div>`
     this.show('title')
   }
@@ -193,12 +191,6 @@ export class RallyUi {
       signal.dataset.value = hud.countdown > 0 ? String(hud.countdown) : hud.starting ? 'go' : ''
       signal.classList.toggle('is-active', active)
       signal.setAttribute('aria-hidden', String(!active))
-    }
-    const co = this.root.querySelector<HTMLElement>('.codriver')
-    if (co) {
-      co.classList.toggle('is-visible', !!hud.coDriver)
-      co.classList.toggle('is-urgent', hud.coDriverUrgent)
-      this.text('[data-slot="codriver-text"]', hud.coDriver)
     }
     const engineButton = this.root.querySelector<HTMLButtonElement>('[data-action="engine-toggle"]')
     if (engineButton) {
@@ -509,7 +501,6 @@ export class RallyUi {
   <div class="hud-top"><div class="hud-panel stage-panel"><span class="hud-symbol">✦</span><div><b data-slot="hud-stage">المرحلة 1</b><small data-slot="hud-lap">اللفة 1/2</small></div></div><div class="race-position"><b data-slot="hud-position">المركز 1/7</b><small data-slot="hud-time">00:00</small><small class="hud-impacts" data-slot="hud-impacts">اصطدامات ٠/٥</small></div><div class="hud-right"><div class="hud-coins"><span aria-hidden="true">Z</span><b data-slot="hud-coins">0</b></div><button class="hud-camera" data-action="camera" aria-label="تبديل الكاميرا" data-slot="hud-camera">🎥</button><button class="hud-engine" data-action="engine-toggle" aria-label="إيقاف صوت المحرك" aria-pressed="true" title="إيقاف صوت المحرك">🔊</button><button class="hud-pause" data-action="pause" data-i18n-label="touch.pause" aria-label="توقف مؤقت">Ⅱ</button></div></div>
   <div class="hud-conditions" data-slot="hud-conditions"></div>
   <ol class="standings"></ol>
-  <div class="codriver" role="status"><div><small>مساعد السباق</small><b data-slot="codriver-text"></b></div></div>
   <div class="speed-gauge"><div class="gear-readout"><b data-slot="hud-gear">1</b><small>GEAR</small></div><div class="speed-readout"><strong data-slot="hud-speed">0</strong><small data-i18n="hud.speed"></small><small class="rpm-readout"><span data-slot="hud-rpm">950</span> RPM</small></div></div>
   <div class="turbo-box"><div><span data-i18n="hud.turbo"></span><b data-slot="turbo-percent">0%</b></div><small data-slot="turbo-name"></small><div class="turbo-meter"><i class="turbo-fill"></i></div></div>
   <div class="race-signal" aria-live="assertive" aria-hidden="true"></div><div class="hud-impact-reset" role="status" data-i18n="hud.impactReset"></div><div class="hud-warning" data-i18n="hud.crash"></div><div class="hud-drift" data-i18n="hud.drift"></div>
