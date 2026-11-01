@@ -5,8 +5,8 @@ import { CAMPAIGN_CARS, TURBO_TYPES, defaultRaceProgress, type CarId, type RaceP
 
 export type Locale = 'ar'
 export type Quality = 'low' | 'medium' | 'high'
-export type CameraMode = 'chase' | 'far' | 'hood' | 'bumper' | 'tv'
-export const CAMERA_MODES: readonly CameraMode[] = ['chase', 'far', 'hood', 'bumper', 'tv']
+export type CameraMode = 'chase' | 'far' | 'hood' | 'bumper' | 'tv' | 'photo'
+export const CAMERA_MODES: readonly CameraMode[] = ['chase', 'far', 'hood', 'bumper', 'tv', 'photo']
 
 export type SaveData = {
   version: 2

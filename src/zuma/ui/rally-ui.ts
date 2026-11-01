@@ -13,7 +13,7 @@ import karimImg from '../../assets/driver-karim.jpg'
 import mazenImg from '../../assets/codriver-mazen.jpg'
 
 const PORTRAITS: Record<DriverId, string> = { salem: salemImg, layla: laylaImg, karim: karimImg }
-const CAMERA_LABEL: Record<string, string> = { chase: 'مطاردة', far: 'مطاردة بعيدة', hood: 'قمرة القيادة', bumper: 'المصد', tv: 'تلفزيونية' }
+const CAMERA_LABEL: Record<string, string> = { chase: 'مطاردة', far: 'مطاردة بعيدة', hood: 'قمرة القيادة', bumper: 'المصد', tv: 'تلفزيونية', photo: 'تصوير سينمائي' }
 const WEATHER_ICON: Record<string, string> = { clear: '☀', cloudy: '☁', rain: '☔', fog: '≋', snow: '❄', sandstorm: '🌪' }
 const CAR_DESIGN_LABEL: Record<string, string> = {
   glb: 'رالي',
@@ -32,6 +32,7 @@ export type RallyUiActions = {
   start(stage: number): void
   resume(): void
   restart(): void
+  replay(): void
   next(stage: number): void
   quit(): void
   buyCar(id: CarId): void
@@ -230,6 +231,8 @@ export class RallyUi {
     const next = this.root.querySelector<HTMLButtonElement>('[data-action="next"]')!
     next.hidden = !result.won || result.stage >= 100
     next.textContent = this.i18n.t('menu.next')
+    const replay = this.root.querySelector<HTMLButtonElement>('[data-action="replay"]')
+    if (replay) replay.hidden = !result.hasReplay
     this.root.querySelector('.results-unranked')?.classList.toggle('is-visible', result.unranked)
     this.show('results')
   }
@@ -380,6 +383,7 @@ export class RallyUi {
       case 'garage': this.showGarage(); break
       case 'resume': this.actions.resume(); break
       case 'restart': this.actions.restart(); break
+      case 'replay': this.actions.replay(); break
       case 'next': if (this.lastResult) this.actions.next(this.lastResult.nextStage); break
       case 'quit': this.actions.quit(); break
       case 'settings': this.push('settings'); break
@@ -506,7 +510,7 @@ export class RallyUi {
 </section>
 <section class="screen screen-modal" data-screen="pause"><div class="modal-card"><p class="eyebrow" data-i18n="game.title"></p><h2 data-i18n="pause.title"></h2><nav class="menu"><button data-nav class="btn btn-primary" data-action="resume"><span data-i18n="menu.resume"></span></button><button data-nav class="btn" data-action="restart"><span data-i18n="menu.restart"></span></button><button data-nav class="btn" data-action="garage"><span data-i18n="menu.garage"></span></button><button data-nav class="btn" data-action="settings"><span data-i18n="menu.settings"></span></button><button data-nav class="btn btn-quiet" data-action="quit"><span data-i18n="menu.quit"></span></button></nav></div></section>
 <section class="screen screen-modal" data-screen="settings"><div class="modal-card settings-card"><header class="panel-heading"><button data-nav class="icon-btn" data-action="back" aria-label="رجوع">‹</button><h2 data-i18n="settings.title"></h2></header><fieldset><legend data-i18n="settings.audio"></legend>${range('musicVolume', 'settings.music', 0, 1, 0.05)}${range('sfxVolume', 'settings.sfxVolume', 0, 1, 0.05)}${toggle('muted', 'settings.mute')}</fieldset><fieldset><legend data-i18n="settings.controls"></legend>${range('sensitivity', 'settings.sensitivity', 0.5, 1.8, 0.1)}<div class="setting-row"><span>ناقل الحركة</span><button data-nav class="transmission-toggle" data-action="transmission-toggle" aria-pressed="false">أوتوماتيك</button></div></fieldset><fieldset><legend data-i18n="settings.display"></legend><div class="setting-row"><span data-i18n="settings.quality"></span><div class="quality-segment"><button data-nav class="quality-choice" data-value="low" data-i18n="settings.low"></button><button data-nav class="quality-choice" data-value="medium" data-i18n="settings.medium"></button><button data-nav class="quality-choice" data-value="high" data-i18n="settings.high"></button></div></div>${toggle('reducedMotion', 'settings.reduceMotion')}</fieldset><fieldset><legend>الصوت</legend><div class="setting-row"><span>صوت المحرك</span><button data-nav class="toggle" data-setting="engineSound" aria-pressed="true"></button></div></fieldset></div></section>
-<section class="screen screen-modal screen-results" data-screen="results"><div class="modal-card results-panel"><div class="results-emblem">🏁</div><p class="eyebrow" data-slot="results-stage"></p><h2 class="results-title"></h2><div class="results-grid"><div><span data-i18n="results.time"></span><b data-slot="results-time"></b></div><div><span data-i18n="results.reward"></span><b data-slot="results-reward"></b></div><div><span data-i18n="results.balance"></span><b data-slot="results-coins"></b></div></div><p class="results-unranked" data-i18n="results.unranked"></p><nav class="menu"><button data-nav class="btn btn-primary" data-action="next"><span data-i18n="menu.next"></span></button><button data-nav class="btn" data-action="restart"><span data-i18n="results.retry"></span></button><button data-nav class="btn" data-action="campaign"><span data-i18n="results.map"></span></button><button data-nav class="btn btn-quiet" data-action="quit"><span data-i18n="results.home"></span></button></nav></div></section>`
+<section class="screen screen-modal screen-results" data-screen="results"><div class="modal-card results-panel"><div class="results-emblem">🏁</div><p class="eyebrow" data-slot="results-stage"></p><h2 class="results-title"></h2><div class="results-grid"><div><span data-i18n="results.time"></span><b data-slot="results-time"></b></div><div><span data-i18n="results.reward"></span><b data-slot="results-reward"></b></div><div><span data-i18n="results.balance"></span><b data-slot="results-coins"></b></div></div><p class="results-unranked" data-i18n="results.unranked"></p><nav class="menu"><button data-nav class="btn btn-primary" data-action="next"><span data-i18n="menu.next"></span></button><button data-nav class="btn" data-action="replay" hidden>إعادة العرض</button><button data-nav class="btn" data-action="restart"><span data-i18n="results.retry"></span></button><button data-nav class="btn" data-action="campaign"><span data-i18n="results.map"></span></button><button data-nav class="btn btn-quiet" data-action="quit"><span data-i18n="results.home"></span></button></nav></div></section>`
   }
 }
 

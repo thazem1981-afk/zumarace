@@ -7,6 +7,7 @@ import { parseSave } from '../engine/save'
 import { advanceLateralMotion, passingLane } from './handling'
 import { shapeAnalogStick, smoothControl } from '../engine/input'
 import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear } from './transmission'
+import { sampleReplay, type ReplayFrame } from './replay'
 import { buildStageRoutePoints } from './rally-track'
 import * as THREE from 'three'
 import { ParticlePool, SkidMarks } from './vfx'
@@ -77,6 +78,7 @@ describe('garage customisation', () => {
     const s = parseSave(JSON.stringify({ version: 2, cameraMode: 'hood', driver: 'layla' }))
     expect(s.cameraMode).toBe('hood')
     expect(s.driver).toBe('layla')
+    expect(parseSave(JSON.stringify({ version: 2, cameraMode: 'photo' })).cameraMode).toBe('photo')
   })
   it('defaults engine sound on and persists the mute choice', () => {
     expect(parseSave(null).engineSound).toBe(true)
@@ -255,5 +257,27 @@ describe('rally transmission', () => {
     expect(gearAcceleration(1)).toBeGreaterThan(gearAcceleration(6))
     expect(gearTopSpeed(6)).toBeGreaterThan(gearTopSpeed(1))
     expect(engineRpm(0, 1)).toBe(950)
+  })
+})
+
+
+describe('race replay sampling', () => {
+  const frames: ReplayFrame[] = [
+    { time: 0, distance: 0, lane: 0, speed: 10, lateralVelocity: 0, longitudinalAccel: 0, steerInput: 0, drifting: false, braking: false, rivals: [{ distance: 8, lane: -2 }] },
+    { time: 1, distance: 20, lane: 4, speed: 30, lateralVelocity: 2, longitudinalAccel: 4, steerInput: 1, drifting: true, braking: true, rivals: [{ distance: 28, lane: 2 }] },
+  ]
+
+  it('interpolates player and rival positions between recorded snapshots', () => {
+    const frame = sampleReplay(frames, 0.5)
+    expect(frame?.distance).toBe(10)
+    expect(frame?.lane).toBe(2)
+    expect(frame?.speed).toBe(20)
+    expect(frame?.rivals[0].distance).toBe(18)
+  })
+
+  it('clamps playback to the first and last recorded snapshots', () => {
+    expect(sampleReplay(frames, -1)?.distance).toBe(0)
+    expect(sampleReplay(frames, 4)?.distance).toBe(20)
+    expect(sampleReplay([], 0)).toBeNull()
   })
 })
