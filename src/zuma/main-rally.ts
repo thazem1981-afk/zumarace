@@ -46,7 +46,7 @@ export async function boot(): Promise<void> {
     input.sensitivity = data.sensitivity
     input.invertY = data.invertY
     game?.setTransmission(data.transmission)
-    audio.setVolumes(data.musicVolume, data.sfxVolume, data.muted)
+    audio.setVolumes(data.sfxVolume, data.muted)
     audio.setEngineSoundEnabled(data.engineSound)
     if (game) {
       game.reducedMotion = data.reducedMotion
@@ -67,7 +67,6 @@ export async function boot(): Promise<void> {
     resume: () => {
       if (game?.mode !== 'paused') return
       game.resume()
-      if ((game.mode as RallyMode) === 'playing') audio.startMusic()
       ui.show('hud')
       loop?.resetAccumulator()
     },
@@ -88,7 +87,6 @@ export async function boot(): Promise<void> {
     },
     quit: () => {
       game?.toTitle()
-      audio.stopMusic()
       audio.updateEngine(0, 0, false, false)
       game?.preview(save.data.raceProgress.unlockedStage)
       ui.showTitle()
@@ -157,7 +155,6 @@ export async function boot(): Promise<void> {
     touchControls?.cancelAll()
     input.releaseAll()
     ui.show('pause')
-    audio.stopMusic()
     audio.updateEngine(0, 0, false, false)
   }
 
@@ -207,7 +204,6 @@ export async function boot(): Promise<void> {
           if (g.mode === 'playing' || g.mode === 'countdown' || g.mode === 'replay') updatePause()
           else if (g.mode === 'paused' && ui.screen === 'pause') {
             g.resume()
-            if ((g.mode as RallyMode) === 'playing') audio.startMusic()
             ui.show('hud')
           } else ui.back()
           return
