@@ -14,6 +14,7 @@ import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './charact
 import { ParticlePool, SkidMarks } from './vfx'
 import { describeNote, paceNotePhase } from './pace-notes'
 import { advanceLateralMotion, passingLane } from './handling'
+import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear, type TransmissionMode } from './transmission'
 import type { CameraMode } from '../engine/save'
 
 export type RallyMode = 'attract' | 'countdown' | 'playing' | 'paused' | 'ended'
@@ -32,6 +33,8 @@ export type RallyHud = {
   stage: number
   stageName: string
   speed: number
+  gear: number
+  rpm: number
   lap: number
   laps: number
   place: number
@@ -124,6 +127,8 @@ export class RallyGame {
   private pausedMode: 'countdown' | 'playing' = 'playing'
   private raceRunNumber = 0
   cameraMode: CameraMode = 'chase'
+  transmissionMode: TransmissionMode = 'automatic'
+  gear = 1
   private garage: Garage = {}
   private driver: Driver = driverById('salem')
   private readonly atmosphere: Atmosphere
@@ -203,6 +208,7 @@ export class RallyGame {
     this.nitroEffect = 0
     this.body.position.set(0, 0, 0)
     this.speed = 0
+    this.gear = 1
     this.nitro = this.progress.selectedTurbo ? 1 : 0
     this.elapsed = 0
     this.crashTimer = 0
@@ -294,6 +300,11 @@ export class RallyGame {
 
   setDriver(id: DriverId): void { this.driver = driverById(id) }
 
+  setTransmission(mode: TransmissionMode): void {
+    this.transmissionMode = mode
+    if (mode === 'automatic') this.gear = automaticGear(this.speed)
+  }
+
   /** Show a stage's landscape and conditions behind the title screen. */
   preview(stageNumber: number): void {
     if (this.mode !== 'attract') return
@@ -363,8 +374,13 @@ export class RallyGame {
     const ability = CAR_ABILITIES[this.car.ability]
     const engineScale = (0.82 + this.car.acceleration * 0.035 + this.progress.engineUpgrade * 0.035) * ability.acceleration * this.driver.acceleration
     const speedScale = (0.82 + this.car.topSpeed * 0.036 + this.progress.engineUpgrade * 0.035) * ability.topSpeed
-    const maxSpeed = CONFIG.race.maxSpeed * speedScale
-    const acceleration = CONFIG.race.acceleration * engineScale
+    if (this.transmissionMode === 'automatic') this.gear = automaticGear(this.speed)
+    else {
+      if (this.input.consume('gearUp')) this.gear = shiftGear(this.gear, 1)
+      if (this.input.consume('gearDown')) this.gear = shiftGear(this.gear, -1)
+    }
+    const maxSpeed = CONFIG.race.maxSpeed * speedScale * gearTopSpeed(this.gear)
+    const acceleration = CONFIG.race.acceleration * engineScale * gearAcceleration(this.gear)
     if (this.crashTimer > 0) {
       this.crashTimer = Math.max(0, this.crashTimer - dt)
       this.speed = Math.max(4, this.speed - 11 * dt)
@@ -416,7 +432,7 @@ export class RallyGame {
     }
     if (Math.abs(this.laneOffset) > this.track.width * 0.35) this.speed = Math.max(0, this.speed - 5.2 * ability.offroadDrag * SURFACE_DRAG[this.conditions.biome.surface] * dt)
     this.longitudinalAccel = (this.speed - previousSpeed) / Math.max(0.001, dt)
-    this.audio.updateEngine(this.speed, manualThrottle, turboHeld, true)
+    this.audio.updateEngine(this.speed, manualThrottle, turboHeld, true, this.gear)
 
     if (this.crashTimer <= 0) this.trackDistance = Math.max(0, this.trackDistance + this.speed * dt)
     this.updateRivals(dt)
@@ -500,6 +516,8 @@ export class RallyGame {
       stage: this.stageNumber,
       stageName: this.currentStage.name,
       speed: Math.round(Math.max(0, this.speed) * 3.6),
+      gear: this.gear,
+      rpm: engineRpm(this.speed, this.gear),
       lap,
       laps: this.stageLaps,
       place: 1 + ahead,
