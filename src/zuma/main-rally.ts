@@ -45,6 +45,7 @@ export async function boot(): Promise<void> {
   const applySettings = (data: SaveData) => {
     input.sensitivity = data.sensitivity
     input.invertY = data.invertY
+    game?.setTransmission(data.transmission)
     audio.setVolumes(data.musicVolume, data.sfxVolume, data.muted)
     audio.setEngineSoundEnabled(data.engineSound)
     if (game) {
@@ -179,6 +180,7 @@ export async function boot(): Promise<void> {
     })
     game.reducedMotion = save.data.reducedMotion
     game.cameraMode = save.data.cameraMode
+    game.setTransmission(save.data.transmission)
     game.setDriver(save.data.driver)
     game.setGarage(save.data.garage)
     game.preview(save.data.raceProgress.unlockedStage)
@@ -215,6 +217,15 @@ export async function boot(): Promise<void> {
     window.addEventListener('resize', () => g.resize(window.innerWidth, window.innerHeight))
     g.resize(window.innerWidth, window.innerHeight)
     input.endFrame()
+    // Browsers block automatic speech/audio. The first real interaction unlocks a single welcome greeting.
+    const welcomeOnce = () => {
+      audio.unlock()
+      audio.playWelcome()
+      window.removeEventListener('pointerdown', welcomeOnce, true)
+      window.removeEventListener('keydown', welcomeOnce, true)
+    }
+    window.addEventListener('pointerdown', welcomeOnce, { once: true, capture: true })
+    window.addEventListener('keydown', welcomeOnce, { once: true, capture: true })
     ui.setBootProgress(1)
     window.setTimeout(() => ui.showTitle(), 160)
     ;(window as unknown as { __game: unknown }).__game = { game: g, ui, input, save }

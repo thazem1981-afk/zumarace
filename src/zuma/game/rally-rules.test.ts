@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { BIOME_ORDER, biomeForStage, conditionsForStage, WEATHER_GRIP, windForWeather } from './environment'
+import { BIOME_ORDER, biomeForStage, conditionsForStage, gripForConditions, SURFACE_GRIP, WEATHER_GRIP, windForWeather } from './environment'
 import { CAMPAIGN_CARS, CAMPAIGN_STAGES } from './campaign'
-import { buildPaceNotes, gradeFor, turnAngle } from './pace-notes'
+import { buildPaceNotes, gradeFor, paceNotePhase, turnAngle } from './pace-notes'
 import { lookFor, parseGarage } from './customization'
 import { parseSave } from '../engine/save'
-import { advanceLateralMotion } from './handling'
+import { advanceLateralMotion, passingLane } from './handling'
 import { shapeAnalogStick, smoothControl } from '../engine/input'
+import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear } from './transmission'
 import { buildStageRoutePoints } from './rally-track'
 import * as THREE from 'three'
 import { ParticlePool, SkidMarks } from './vfx'
@@ -80,6 +81,11 @@ describe('garage customisation', () => {
   it('defaults engine sound on and persists the mute choice', () => {
     expect(parseSave(null).engineSound).toBe(true)
     expect(parseSave(JSON.stringify({ version: 2, engineSound: false })).engineSound).toBe(false)
+  })
+
+  it('defaults to automatic transmission and preserves manual selection', () => {
+    expect(parseSave(null).transmission).toBe('automatic')
+    expect(parseSave(JSON.stringify({ version: 2, transmission: 'manual' })).transmission).toBe('manual')
   })
 })
 
@@ -190,5 +196,64 @@ describe('precision driving controls', () => {
     expect(first).toBeGreaterThan(0)
     expect(first).toBeLessThan(1)
     expect(smoothControl(first, 1, 1 / 60)).toBeGreaterThan(first)
+  })
+})
+
+
+describe('surface-aware rally grip', () => {
+  it('gives tarmac more grip than loose sand and snow', () => {
+    expect(SURFACE_GRIP.tarmac).toBeGreaterThan(SURFACE_GRIP.sand)
+    expect(SURFACE_GRIP.sand).toBeGreaterThan(SURFACE_GRIP.snow)
+  })
+
+  it('reduces road grip in rain and snow', () => {
+    expect(gripForConditions('tarmac', 'rain')).toBeLessThan(gripForConditions('tarmac', 'clear'))
+    expect(gripForConditions('gravel', 'snow')).toBeLessThan(gripForConditions('gravel', 'cloudy'))
+  })
+
+  it('keeps clear-weather grip stable at zero weather intensity', () => {
+    expect(gripForConditions('gravel', 'rain', 0)).toBe(SURFACE_GRIP.gravel)
+  })
+})
+
+
+describe('rally racecraft helpers', () => {
+  it('chooses a clear lane away from nearby traffic', () => {
+    const target = passingLane(-1, 1, 4)
+    expect(Math.abs(target - 1)).toBeGreaterThan(2.2)
+    expect(target).toBeGreaterThanOrEqual(-4)
+    expect(target).toBeLessThanOrEqual(4)
+  })
+
+  it('keeps passing targets within the road edge', () => {
+    expect(Math.abs(passingLane(0, 3.8, 4))).toBeLessThanOrEqual(4)
+  })
+
+  it('stages co-driver calls before the braking point', () => {
+    expect(paceNotePhase(160)).toBe('prepare')
+    expect(paceNotePhase(90)).toBe('call')
+    expect(paceNotePhase(30)).toBeNull()
+    expect(paceNotePhase(Number.NaN)).toBeNull()
+  })
+})
+
+
+describe('rally transmission', () => {
+  it('shifts automatically as speed rises', () => {
+    expect(automaticGear(4)).toBe(1)
+    expect(automaticGear(22)).toBe(3)
+    expect(automaticGear(52)).toBe(6)
+  })
+
+  it('keeps manual shifts within six forward gears', () => {
+    expect(shiftGear(1, -1)).toBe(1)
+    expect(shiftGear(1, 1)).toBe(2)
+    expect(shiftGear(6, 1)).toBe(6)
+  })
+
+  it('trades low-gear acceleration for higher-gear top speed', () => {
+    expect(gearAcceleration(1)).toBeGreaterThan(gearAcceleration(6))
+    expect(gearTopSpeed(6)).toBeGreaterThan(gearTopSpeed(1))
+    expect(engineRpm(0, 1)).toBe(950)
   })
 })

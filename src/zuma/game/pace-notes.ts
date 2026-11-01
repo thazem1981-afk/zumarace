@@ -72,3 +72,11 @@ export function describeNote(note: PaceNote, metresAway: number): string {
   const dist = Math.max(20, Math.round(metresAway / 10) * 10)
   return `${dir} ${ar(note.grade)}${extra} · بعد ${ar(dist)} م`
 }
+
+/** Two-stage co-driver timing: prepare early, then deliver the actionable corner call. */
+export function paceNotePhase(metresAway: number): 'prepare' | 'call' | null {
+  if (!Number.isFinite(metresAway) || metresAway < 42) return null
+  if (metresAway >= 125 && metresAway <= 180) return 'prepare'
+  if (metresAway < 125) return 'call'
+  return null
+}

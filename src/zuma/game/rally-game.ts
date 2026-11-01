@@ -7,13 +7,14 @@ import { CONFIG } from './config'
 import { RallyTrack, type TrackHazard } from './rally-track'
 import { tuning } from './tuning'
 import { Atmosphere } from './atmosphere'
-import { conditionsForStage, SURFACE_DRAG, TIME_LABEL, WEATHER_GRIP, WEATHER_LABEL, type StageConditions } from './environment'
+import { conditionsForStage, gripForConditions, SURFACE_DRAG, TIME_LABEL, WEATHER_LABEL, type StageConditions } from './environment'
 import { buildRealisticCar } from './vehicle'
 import { DEFAULT_LOOK, lookFor, type CarLook, type Garage } from './customization'
 import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './characters'
 import { ParticlePool, SkidMarks } from './vfx'
-import { describeNote } from './pace-notes'
-import { advanceLateralMotion } from './handling'
+import { describeNote, paceNotePhase } from './pace-notes'
+import { advanceLateralMotion, passingLane } from './handling'
+import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear, type TransmissionMode } from './transmission'
 import type { CameraMode } from '../engine/save'
 
 export type RallyMode = 'attract' | 'countdown' | 'playing' | 'paused' | 'ended'
@@ -32,6 +33,8 @@ export type RallyHud = {
   stage: number
   stageName: string
   speed: number
+  gear: number
+  rpm: number
   lap: number
   laps: number
   place: number
@@ -124,6 +127,8 @@ export class RallyGame {
   private pausedMode: 'countdown' | 'playing' = 'playing'
   private raceRunNumber = 0
   cameraMode: CameraMode = 'chase'
+  transmissionMode: TransmissionMode = 'automatic'
+  gear = 1
   private garage: Garage = {}
   private driver: Driver = driverById('salem')
   private readonly atmosphere: Atmosphere
@@ -203,6 +208,7 @@ export class RallyGame {
     this.nitroEffect = 0
     this.body.position.set(0, 0, 0)
     this.speed = 0
+    this.gear = 1
     this.nitro = this.progress.selectedTurbo ? 1 : 0
     this.elapsed = 0
     this.crashTimer = 0
@@ -294,6 +300,11 @@ export class RallyGame {
 
   setDriver(id: DriverId): void { this.driver = driverById(id) }
 
+  setTransmission(mode: TransmissionMode): void {
+    this.transmissionMode = mode
+    if (mode === 'automatic') this.gear = automaticGear(this.speed)
+  }
+
   /** Show a stage's landscape and conditions behind the title screen. */
   preview(stageNumber: number): void {
     if (this.mode !== 'attract') return
@@ -363,8 +374,13 @@ export class RallyGame {
     const ability = CAR_ABILITIES[this.car.ability]
     const engineScale = (0.82 + this.car.acceleration * 0.035 + this.progress.engineUpgrade * 0.035) * ability.acceleration * this.driver.acceleration
     const speedScale = (0.82 + this.car.topSpeed * 0.036 + this.progress.engineUpgrade * 0.035) * ability.topSpeed
-    const maxSpeed = CONFIG.race.maxSpeed * speedScale
-    const acceleration = CONFIG.race.acceleration * engineScale
+    if (this.transmissionMode === 'automatic') this.gear = automaticGear(this.speed)
+    else {
+      if (this.input.consume('gearUp')) this.gear = shiftGear(this.gear, 1)
+      if (this.input.consume('gearDown')) this.gear = shiftGear(this.gear, -1)
+    }
+    const maxSpeed = CONFIG.race.maxSpeed * speedScale * gearTopSpeed(this.gear)
+    const acceleration = CONFIG.race.acceleration * engineScale * gearAcceleration(this.gear)
     if (this.crashTimer > 0) {
       this.crashTimer = Math.max(0, this.crashTimer - dt)
       this.speed = Math.max(4, this.speed - 11 * dt)
@@ -373,7 +389,9 @@ export class RallyGame {
       if (this.speed > 0.8) this.speed = Math.max(0, this.speed - CONFIG.race.brakeForce * brakePower * dt)
       else this.speed = Math.max(-6, this.speed - CONFIG.race.reverseForce * Math.max(brakePower, 0.6) * dt)
     } else if (manualThrottle > 0) {
-      this.speed = Math.min(maxSpeed, this.speed + acceleration * manualThrottle * dt)
+      // A downshift must not teleport speed to the lower ratio's limit; let engine braking bleed it off.
+      if (this.speed > maxSpeed) this.speed = Math.max(maxSpeed, this.speed - 4.5 * dt)
+      else this.speed = Math.min(maxSpeed, this.speed + acceleration * manualThrottle * dt)
     } else if (this.speed < CONFIG.race.autoCruiseSpeed) {
       this.speed = Math.min(CONFIG.race.autoCruiseSpeed, this.speed + acceleration * CONFIG.race.autoThrottle * dt)
     } else if (this.speed > CONFIG.race.autoCruiseSpeed) {
@@ -391,8 +409,8 @@ export class RallyGame {
 
     const weather = this.conditions.weather
     const slippery = weather === 'rain' || weather === 'snow'
-    const weatherGrip = 1 - (1 - WEATHER_GRIP[weather]) * this.atmosphere.intensity
-    const tireScale = (0.8 + this.car.grip * 0.04 + this.progress.tireUpgrade * 0.075) * ability.grip * weatherGrip * (slippery ? this.driver.wetGrip : 1)
+    const surfaceGrip = gripForConditions(this.conditions.biome.surface, weather, this.atmosphere.intensity)
+    const tireScale = (0.8 + this.car.grip * 0.04 + this.progress.tireUpgrade * 0.075) * ability.grip * surfaceGrip * (slippery ? this.driver.wetGrip : 1)
     const steer = -this.input.move.x * this.input.sensitivity
     this.previousPlayerLane = this.laneOffset
     this.lateralVelocity = advanceLateralMotion({
@@ -416,7 +434,7 @@ export class RallyGame {
     }
     if (Math.abs(this.laneOffset) > this.track.width * 0.35) this.speed = Math.max(0, this.speed - 5.2 * ability.offroadDrag * SURFACE_DRAG[this.conditions.biome.surface] * dt)
     this.longitudinalAccel = (this.speed - previousSpeed) / Math.max(0.001, dt)
-    this.audio.updateEngine(this.speed, manualThrottle, turboHeld, true)
+    this.audio.updateEngine(this.speed, manualThrottle, turboHeld, true, this.gear)
 
     if (this.crashTimer <= 0) this.trackDistance = Math.max(0, this.trackDistance + this.speed * dt)
     this.updateRivals(dt)
@@ -459,9 +477,11 @@ export class RallyGame {
     } else {
       const dt = Math.max(0, frameSeconds)
       const activeDrive = this.mode === 'playing' && !this.reducedMotion
-      const targetPitch = activeDrive ? THREE.MathUtils.clamp(-this.longitudinalAccel * 0.004, -0.08, 0.08) : 0
+      // Chassis weight transfer: braking loads the nose, throttle lifts it, and cornering loads the outside tyres.
+      const targetPitch = activeDrive ? THREE.MathUtils.clamp(-this.longitudinalAccel * 0.0052, -0.12, 0.12) : 0
       const lateralRatio = this.lateralVelocity / Math.max(8, Math.abs(this.speed))
-      const targetRoll = activeDrive ? THREE.MathUtils.clamp(-this.steerInput * 0.035 - lateralRatio * 0.06, -0.1, 0.1) : 0
+      const cornerLoad = this.steerInput * Math.min(1, Math.abs(this.speed) / 24)
+      const targetRoll = activeDrive ? THREE.MathUtils.clamp(-cornerLoad * 0.052 - lateralRatio * (this.driftActive ? 0.075 : 0.045), -0.13, 0.13) : 0
       const targetYaw = activeDrive ? THREE.MathUtils.clamp(this.steerInput * 0.045 + Math.atan2(this.lateralVelocity, Math.max(8, Math.abs(this.speed))) * 0.16, -0.12, 0.12) : 0
       this.bodyPitch = THREE.MathUtils.damp(this.bodyPitch, targetPitch, 8, dt)
       this.bodyYaw = THREE.MathUtils.damp(this.bodyYaw, targetYaw, 8, dt)
@@ -498,6 +518,8 @@ export class RallyGame {
       stage: this.stageNumber,
       stageName: this.currentStage.name,
       speed: Math.round(Math.max(0, this.speed) * 3.6),
+      gear: this.gear,
+      rpm: engineRpm(this.speed, this.gear),
       lap,
       laps: this.stageLaps,
       place: 1 + ahead,
@@ -553,11 +575,18 @@ export class RallyGame {
       const note = this.track.paceNotes[i]
       const ahead = (note.distance - here + L) % L
       const key = `${lap}:${i}`
-      if (ahead < 50 || ahead > 170 || this.announced.has(key)) continue
-      this.announced.add(key)
       const dir = note.direction === 'left' ? 'يسار' : 'يمين'
-      this.say(describeNote(note, ahead), `${dir} ${note.grade}${note.grade <= 2 ? '، اكبح' : ''}`, note.grade <= 2)
-      return
+      const phase = paceNotePhase(ahead)
+      if (phase === 'prepare' && !this.announced.has(`${key}:prepare`)) {
+        this.announced.add(`${key}:prepare`)
+        this.say(`استعد · ${describeNote(note, ahead)}`, `استعد ${dir} ${note.grade}`)
+        return
+      }
+      if (phase === 'call' && !this.announced.has(`${key}:call`)) {
+        this.announced.add(`${key}:call`)
+        this.say(describeNote(note, ahead), `${dir} ${note.grade}${note.grade <= 2 ? '، اكبح' : ''}`, note.grade <= 2)
+        return
+      }
     }
   }
 
@@ -573,7 +602,8 @@ export class RallyGame {
     this.body.visible = true
     if (mode === 'chase' || mode === 'far') {
       const far = mode === 'far'
-      desired.copy(sample.position).addScaledVector(sample.tangent, -(CONFIG.camera.distance + (far ? 11 : 4))).add(new THREE.Vector3(0, CONFIG.camera.height + (far ? 6 : 3), 0))
+      const speedBlend = Math.min(1, Math.abs(this.speed) / CONFIG.race.maxSpeed)
+      desired.copy(sample.position).addScaledVector(sample.tangent, -(CONFIG.camera.distance + (far ? 11 : 4) + speedBlend * 3.5)).add(new THREE.Vector3(0, CONFIG.camera.height + (far ? 6 : 3) + speedBlend * 1.2, 0))
       target.copy(sample.position).addScaledVector(sample.tangent, far ? 9 : 5).add(new THREE.Vector3(0, 1.7, 0))
     } else if (mode === 'hood' || mode === 'bumper') {
       const hood = mode === 'hood'
@@ -607,7 +637,7 @@ export class RallyGame {
       this.camera.userData.ready = true
     } else this.camera.position.lerp(desired, 1 - Math.exp(-follow * frameSeconds))
     this.camera.lookAt(target)
-    const fov = CONFIG.camera.fov + fovBoost + (this.reducedMotion ? 0 : this.nitroEffect * 4.5) + (mode === 'tv' ? -18 : 0)
+    const fov = CONFIG.camera.fov + fovBoost + (this.reducedMotion ? 0 : Math.min(3.5, Math.abs(this.speed) / CONFIG.race.maxSpeed * 3.5) + this.nitroEffect * 4.5) + (mode === 'tv' ? -18 : 0)
     if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix() }
     if (!this.reducedMotion && this.mode === 'playing' && mode !== 'tv') {
       this.camera.rotateZ(this.steerInput * 0.014 + (this.driftActive ? Math.sign(this.lateralVelocity) * 0.01 : 0))
@@ -870,11 +900,22 @@ export class RallyGame {
       rival.decisionTimer -= dt
       if (rival.decisionTimer <= 0) {
         const laneRoll = this.nextRivalRandom(rival)
-        rival.targetLane = laneRoll < 0.17
-          ? (this.nextRivalRandom(rival) < 0.5 ? -1 : 1) * laneLimit * 0.82
-          : (this.nextRivalRandom(rival) * 2 - 1) * laneLimit * 0.8
+        const playerAhead = this.trackDistance - rival.distance
+        const playerClose = Math.abs(playerAhead) < 26 && Math.abs(this.laneOffset - rival.lane) < 4.8
+        const traffic = this.rivals
+          .filter(other => other !== rival && Math.abs(other.distance - rival.distance) < 22 && Math.abs(other.lane - rival.lane) < 3.8)
+          .sort((a, b) => Math.abs(a.distance - rival.distance) - Math.abs(b.distance - rival.distance))[0]
+        const threatLane = playerClose ? this.laneOffset : traffic?.lane
+        if (threatLane !== undefined) {
+          rival.targetLane = passingLane(rival.lane, threatLane, laneLimit * 0.82)
+        } else {
+          rival.targetLane = laneRoll < 0.17
+            ? (this.nextRivalRandom(rival) < 0.5 ? -1 : 1) * laneLimit * 0.82
+            : (this.nextRivalRandom(rival) * 2 - 1) * laneLimit * 0.8
+        }
         const pace = 0.73 + this.stageNumber * 0.0017 + (this.nextRivalRandom(rival) - 0.5) * 0.11
-        rival.targetSpeed = CONFIG.race.maxSpeed * pace * CAR_ABILITIES[rival.ability].topSpeed
+        const closingBoost = playerAhead > 0 && playerAhead < 38 ? 1.045 : 1
+        rival.targetSpeed = CONFIG.race.maxSpeed * pace * CAR_ABILITIES[rival.ability].topSpeed * closingBoost
         rival.decisionTimer = 0.85 + this.nextRivalRandom(rival) * 1.75
       }
       const ability = CAR_ABILITIES[rival.ability]
