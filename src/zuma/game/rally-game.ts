@@ -13,7 +13,7 @@ import { DEFAULT_LOOK, lookFor, type CarLook, type Garage } from './customizatio
 import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './characters'
 import { ParticlePool, SkidMarks } from './vfx'
 import { advanceLateralMotion, passingLane } from './handling'
-import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear, type TransmissionMode } from './transmission'
+import { engineRpm, gearAcceleration, gearTopSpeed, shiftGear, type TransmissionMode } from './transmission'
 import { sampleReplay, type ReplayFrame } from './replay'
 import type { CameraMode } from '../engine/save'
 
