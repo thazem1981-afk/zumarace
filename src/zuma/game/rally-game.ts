@@ -13,6 +13,7 @@ import { DEFAULT_LOOK, lookFor, type CarLook, type Garage } from './customizatio
 import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './characters'
 import { ParticlePool, SkidMarks } from './vfx'
 import { describeNote } from './pace-notes'
+import { advanceLateralMotion } from './handling'
 import type { CameraMode } from '../engine/save'
 
 export type RallyMode = 'attract' | 'countdown' | 'playing' | 'paused' | 'ended'
@@ -393,11 +394,17 @@ export class RallyGame {
     const weatherGrip = 1 - (1 - WEATHER_GRIP[weather]) * this.atmosphere.intensity
     const tireScale = (0.8 + this.car.grip * 0.04 + this.progress.tireUpgrade * 0.075) * ability.grip * weatherGrip * (slippery ? this.driver.wetGrip : 1)
     const steer = -this.input.move.x * this.input.sensitivity
-    const lateralAccel = CONFIG.race.steeringForce * tireScale * ability.steering * this.driver.steering * (drift ? 1.24 * ability.drift : 1) * Math.min(1.4, 0.58 + Math.abs(this.speed) / 23)
     this.previousPlayerLane = this.laneOffset
-    this.lateralVelocity += steer * lateralAccel * dt
-    // Low grip means the car keeps sliding sideways for longer.
-    this.lateralVelocity *= Math.exp(-(drift ? 1.5 : 3.25) * Math.min(1, weatherGrip + 0.1) * dt)
+    this.lateralVelocity = advanceLateralMotion({
+      steer,
+      speed: this.speed,
+      steeringForce: CONFIG.race.steeringForce,
+      tireGrip: tireScale,
+      steeringSkill: ability.steering * this.driver.steering * (drift ? ability.drift : 1),
+      drifting: drift,
+      lateralVelocity: this.lateralVelocity,
+      dt,
+    })
     this.laneOffset += this.lateralVelocity * dt
     this.steerInput = steer
     if (Math.abs(steer) < 0.03 && !drift) this.laneOffset *= Math.exp(-0.16 * dt)
