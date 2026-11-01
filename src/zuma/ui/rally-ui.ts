@@ -13,7 +13,7 @@ import karimImg from '../../assets/driver-karim.jpg'
 import mazenImg from '../../assets/codriver-mazen.jpg'
 
 const PORTRAITS: Record<DriverId, string> = { salem: salemImg, layla: laylaImg, karim: karimImg }
-const CAMERA_LABEL: Record<string, string> = { chase: 'مطاردة', far: 'مطاردة بعيدة', hood: 'قمرة القيادة', bumper: 'المصد', tv: 'تلفزيونية' }
+const CAMERA_LABEL: Record<string, string> = { chase: 'مطاردة', far: 'مطاردة بعيدة', hood: 'قمرة القيادة', bumper: 'المصد', tv: 'تلفزيونية', photo: 'تصوير سينمائي' }
 const WEATHER_ICON: Record<string, string> = { clear: '☀', cloudy: '☁', rain: '☔', fog: '≋', snow: '❄', sandstorm: '🌪' }
 const CAR_DESIGN_LABEL: Record<string, string> = {
   glb: 'رالي',
