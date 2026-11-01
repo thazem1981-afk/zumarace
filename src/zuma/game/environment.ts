@@ -75,6 +75,18 @@ export const SURFACE_DRAG: Readonly<Record<SurfaceId, number>> = Object.freeze({
   tarmac: 1.25, gravel: 1, sand: 1, mud: 1.15, snow: 0.9,
 })
 
+/** Baseline tyre grip by road material, before weather and vehicle upgrades are applied. */
+export const SURFACE_GRIP: Readonly<Record<SurfaceId, number>> = Object.freeze({
+  tarmac: 1.08, gravel: 0.94, sand: 0.84, mud: 0.76, snow: 0.68,
+})
+
+/** Combined deterministic grip multiplier for a stage's road and current weather. */
+export function gripForConditions(surface: SurfaceId, weather: WeatherId, intensity = 1): number {
+  const wetness = Math.max(0, Math.min(1, Number.isFinite(intensity) ? intensity : 1))
+  const weatherFactor = 1 - (1 - WEATHER_GRIP[weather]) * wetness
+  return SURFACE_GRIP[surface] * weatherFactor
+}
+
 export const WEATHER_LABEL: Readonly<Record<WeatherId, string>> = Object.freeze({
   clear: 'صحو', cloudy: 'غائم', rain: 'ممطر', fog: 'ضباب', snow: 'تساقط ثلوج', sandstorm: 'عاصفة رملية',
 })
