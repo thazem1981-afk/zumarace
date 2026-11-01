@@ -106,9 +106,9 @@ export class SkidMarks {
 
   clear(): void {
     this.next = 0
-    this.dummy.scale.set(0, 0, 0)
-    this.dummy.updateMatrix()
-    for (let i = 0; i < this.count; i += 1) this.mesh.setMatrixAt(i, this.dummy.matrix)
+    // Use an explicit zero-scale matrix so every instance is hidden immediately.
+    const hidden = new THREE.Matrix4().makeScale(0, 0, 0)
+    for (let i = 0; i < this.count; i += 1) this.mesh.setMatrixAt(i, hidden)
     this.mesh.instanceMatrix.needsUpdate = true
   }
 }
