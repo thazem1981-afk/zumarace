@@ -66,6 +66,15 @@ export class TouchControls {
     window.addEventListener('pointermove', this.onMove, { passive: true })
     window.addEventListener('pointerup', this.onEnd)
     window.addEventListener('pointercancel', this.onEnd)
+    window.addEventListener('lostpointercapture', this.onEnd)
+    window.addEventListener('blur', () => {
+      this.stickId = null
+      this.knob.style.transform = ''
+      this.stick.classList.remove('is-active')
+      this.input.setTouchMove(0, 0)
+      this.stick.style.left = ''
+      this.stick.style.top = ''
+    })
 
     for (const btn of layer.querySelectorAll<HTMLElement>('[data-touch]')) {
       const action = btn.dataset.touch as Action
