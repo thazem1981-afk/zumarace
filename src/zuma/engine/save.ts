@@ -1,4 +1,4 @@
-import type { DriverId } from '../game/characters'
+import { DRIVERS, type DriverId } from '../game/characters'
 import { parseGarage, type Garage } from '../game/customization'
 import type { TransmissionMode } from '../game/transmission'
 import { CAMPAIGN_CARS, TURBO_TYPES, defaultRaceProgress, type CarId, type RaceProgress, type TurboTypeId } from '../game/campaign'
@@ -56,7 +56,7 @@ export function defaultSave(): SaveData {
     garage: {},
     cameraMode: 'chase',
     engineSound: true,
-    transmission: 'automatic',
+    transmission: 'manual',
   }
 }
 
@@ -144,11 +144,11 @@ export function parseSave(raw: string | null): SaveData {
     quality: data.quality === 'low' || data.quality === 'medium' || data.quality === 'high' ? data.quality : base.quality,
     reducedMotion: data.reducedMotion === true,
     raceProgress: data.version === 2 ? parseRaceProgress(data.raceProgress) : base.raceProgress,
-    driver: data.driver === 'layla' || data.driver === 'karim' || data.driver === 'salem' ? data.driver : base.driver,
+    driver: DRIVERS.some(driver => driver.id === data.driver) ? data.driver as DriverId : base.driver,
     garage: parseGarage(data.garage, VALID_CAR_IDS),
     cameraMode: CAMERA_MODES.includes(data.cameraMode as CameraMode) ? data.cameraMode as CameraMode : base.cameraMode,
     engineSound: data.engineSound !== false,
-    transmission: data.transmission === 'manual' ? 'manual' : 'automatic',
+    transmission: 'manual',
   }
 }
 
