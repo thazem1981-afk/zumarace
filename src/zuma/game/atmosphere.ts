@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { TIME_START, type StageConditions, type WeatherId } from './environment'
+import { TIME_START, windForWeather, type StageConditions, type WeatherId } from './environment'
 
 type SkyKey = { t: number; top: number; horizon: number; sun: number; sunI: number; amb: number; fog: number }
 /** Sky colours along the sun's path (0 sunrise → 1 sunset → 1.5 deep night). */
@@ -179,7 +179,7 @@ export class Atmosphere {
     const attr = this.precip.geometry.getAttribute('position') as THREE.BufferAttribute
     const arr = attr.array as Float32Array
     const fall = w === 'rain' ? 26 : w === 'snow' ? 3.2 : 1.2
-    const drift = w === 'sandstorm' ? 18 : w === 'snow' ? 1.2 : 2
+    const wind = windForWeather(w, this.time)
     const visibleCount = Math.floor(arr.length / 3 * (reducedMotion ? 0.08 : 0.35 + 0.65 * this.intensity))
     this.precip.geometry.setDrawRange(0, visibleCount)
     if (reducedMotion) {
@@ -190,9 +190,10 @@ export class Atmosphere {
       const o = i * 3
       const v = this.precipVel[i]
       arr[o + 1] -= fall * v * dt
-      arr[o] += drift * dt * v + (w === 'snow' ? Math.sin(this.time * 2 + i) * 0.02 : 0)
+      arr[o] += wind.x * dt * v + (w === 'snow' ? Math.sin(this.time * 2 + i) * 0.02 : 0)
+      arr[o + 2] += wind.z * dt * v
       if (w === 'sandstorm') arr[o + 1] += Math.sin(this.time * 3 + i) * 0.03
-      if (arr[o + 1] < 0 || arr[o] > 40 || (w === 'sandstorm' && arr[o + 1] > 12)) {
+      if (arr[o + 1] < 0 || arr[o] > 40 || arr[o] < -40 || arr[o + 2] > 40 || arr[o + 2] < -40 || (w === 'sandstorm' && arr[o + 1] > 12)) {
         arr[o] = (Math.random() - 0.5) * 80 - (w === 'sandstorm' ? 20 : 0)
         arr[o + 1] = w === 'sandstorm' ? Math.random() * 10 : 30 + Math.random() * 10
         arr[o + 2] = (Math.random() - 0.5) * 80
