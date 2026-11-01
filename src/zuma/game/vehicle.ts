@@ -169,6 +169,7 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   // Wheels with arches.
   const wheels: THREE.Object3D[] = []
   const frontAxles: THREE.Group[] = []
+  const wheelAxles: THREE.Group[] = []
   const r = p.wheel
   const tireGeo = new THREE.CylinderGeometry(r, r, 0.32, 24)
   tireGeo.rotateZ(Math.PI / 2)
@@ -196,6 +197,7 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
     for (let k = 0; k < 3; k += 1) { const sp = new THREE.Mesh(spokeGeo, rim); sp.rotation.x = (k / 3) * Math.PI; spin.add(sp) }
     axle.add(spin)
     vehicle.add(axle)
+    wheelAxles.push(axle)
     wheels.push(spin)
     if (z > 0) frontAxles.push(axle)
     const arch = new THREE.Mesh(archGeo, p.cage ? trim : paint)
@@ -217,6 +219,7 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   vehicle.userData.wheels = wheels
   vehicle.userData.wheelRadius = r
   vehicle.userData.frontAxles = frontAxles
+  vehicle.userData.wheelAxles = wheelAxles
   vehicle.userData.tailLamp = tail
   return vehicle
 }
