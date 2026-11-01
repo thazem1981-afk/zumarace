@@ -132,10 +132,10 @@ export class RallyUi {
       const selected = progress.selectedCar === car.id
       const action = owned ? 'select-car' : 'buy-car'
       const actionText = selected ? this.i18n.t('shop.selected') : owned ? this.i18n.t('shop.select') : this.i18n.t('shop.buy', { price: number(car.price) })
-      return `<article class="car-card${selected ? ' is-selected' : ''}" style="--car-color:${lookFor(this.save.data.garage, car.id).paint ?? car.color}">
+      return `<article class="car-card${selected ? ' is-selected' : ''}" style="--car-color:${lookFor(this.save.data.garage, car.id).paint ?? car.color}" aria-label="${escapeHtml(car.name)}">
         <div class="car-swatch car-swatch-${car.design}" aria-hidden="true"><span></span><i></i></div>
-        <div class="car-card-copy"><h3>${escapeHtml(car.name)}</h3><p>${this.i18n.t('shop.speed')}: ${number(car.topSpeed)} · ${this.i18n.t('shop.acceleration')}: ${number(car.acceleration)}</p><p>${this.i18n.t('shop.grip')}: ${number(car.grip)}</p><p class="car-ability"><b>${this.i18n.t('shop.ability')}: ${this.i18n.t(`carAbility.${car.ability}.name`)}</b> — ${this.i18n.t(`carAbility.${car.ability}.desc`)}</p></div>
-        <button data-nav class="btn ${selected ? 'btn-selected' : owned ? '' : 'btn-accent'}" data-action="${action}" data-car="${car.id}" ${selected || (!owned && progress.coins < car.price) ? 'disabled' : ''}>${escapeHtml(actionText)}</button>
+        <div class="car-card-copy"><div class="car-card-title"><h3>${escapeHtml(car.name)}</h3><small class="car-state ${selected ? 'is-current' : owned ? 'is-owned' : 'is-locked'}">${selected ? 'مختارة' : owned ? 'مملوكة' : 'مقفلة'}</small></div><p>${this.i18n.t('shop.speed')}: ${number(car.topSpeed)} · ${this.i18n.t('shop.acceleration')}: ${number(car.acceleration)}</p><p>${this.i18n.t('shop.grip')}: ${number(car.grip)}</p><p class="car-ability"><b>${this.i18n.t('shop.ability')}: ${this.i18n.t(`carAbility.${car.ability}.name`)}</b> — ${this.i18n.t(`carAbility.${car.ability}.desc`)}</p></div>
+        <button data-nav class="btn ${selected ? 'btn-selected' : owned ? '' : 'btn-accent'}" data-action="${action}" data-car="${car.id}" aria-pressed="${selected}" aria-label="${selected ? 'السيارة المختارة' : owned ? 'اختيار ' + escapeHtml(car.name) : 'شراء ' + escapeHtml(car.name)}" ${selected || (!owned && progress.coins < car.price) ? 'disabled' : ''}>${escapeHtml(actionText)}</button>
       </article>`
     }).join('')
     this.root.querySelector('[data-slot="garage-coins"]')!.textContent = number(progress.coins)
@@ -288,7 +288,7 @@ export class RallyUi {
     const grid = this.root.querySelector<HTMLElement>('.driver-grid')
     if (!grid) return
     const current = this.save.data.driver
-    grid.innerHTML = DRIVERS.map(d => `<button data-nav class="driver-card${d.id === current ? ' is-selected' : ''}" data-action="driver" data-driver="${d.id}" style="--suit:${d.suit}">
+    grid.innerHTML = DRIVERS.map(d => `<button data-nav class="driver-card${d.id === current ? ' is-selected' : ''}" data-action="driver" data-driver="${d.id}" aria-pressed="${d.id === current}" style="--suit:${d.suit}">
       <img src="${PORTRAITS[d.id]}" alt="" width="72" height="72" loading="lazy"><span><b>${escapeHtml(d.name)}</b><small>${escapeHtml(d.origin)}</small><em>${escapeHtml(d.perk)}</em></span></button>`).join('')
   }
 
