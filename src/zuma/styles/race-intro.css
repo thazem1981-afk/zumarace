@@ -346,3 +346,14 @@
 @media (prefers-reduced-motion: reduce) {
   .screen-boot .boot-card .boot-icon { animation: none; }
 }
+
+
+/* Honour the operating system's reduced-motion preference across every menu effect. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
