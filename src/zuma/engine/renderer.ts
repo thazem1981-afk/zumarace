@@ -50,7 +50,12 @@ export class Renderer {
   applyQuality(quality: Quality): void {
     this.preset = QUALITY_PRESETS[quality]
     this.gl.shadowMap.enabled = this.preset.shadows
-    this.gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.preset.pixelRatio))
+    // High-density mobile screens can make every full-screen pass disproportionately expensive.
+    // Keep the saved quality preset, but cap its render scale on constrained devices.
+    const coarsePointer = matchMedia('(pointer: coarse)').matches
+    const cores = navigator.hardwareConcurrency ?? 4
+    const deviceCap = coarsePointer ? 1.25 : cores <= 4 ? 1.5 : this.preset.pixelRatio
+    this.gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.preset.pixelRatio, deviceCap))
     this.bloom?.dispose()
     this.composer?.dispose()
     this.composer = undefined
