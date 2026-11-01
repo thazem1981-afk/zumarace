@@ -904,7 +904,9 @@ export class RallyGame {
           .filter(other => other !== rival && Math.abs(other.distance - rival.distance) < 22 && Math.abs(other.lane - rival.lane) < 3.8)
           .sort((a, b) => Math.abs(a.distance - rival.distance) - Math.abs(b.distance - rival.distance))[0]
         const threatLane = playerClose ? this.laneOffset : traffic?.lane
-        if (threatLane !== undefined) rival.targetLane = passingLane(rival.lane, threatLane, laneLimit * 0.82) else {
+        if (threatLane !== undefined) {
+          rival.targetLane = passingLane(rival.lane, threatLane, laneLimit * 0.82)
+        } else {
           rival.targetLane = laneRoll < 0.17
             ? (this.nextRivalRandom(rival) < 0.5 ? -1 : 1) * laneLimit * 0.82
             : (this.nextRivalRandom(rival) * 2 - 1) * laneLimit * 0.8
