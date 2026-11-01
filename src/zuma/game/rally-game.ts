@@ -555,11 +555,17 @@ export class RallyGame {
       const note = this.track.paceNotes[i]
       const ahead = (note.distance - here + L) % L
       const key = `${lap}:${i}`
-      if (ahead < 50 || ahead > 170 || this.announced.has(key)) continue
-      this.announced.add(key)
       const dir = note.direction === 'left' ? 'يسار' : 'يمين'
-      this.say(describeNote(note, ahead), `${dir} ${note.grade}${note.grade <= 2 ? '، اكبح' : ''}`, note.grade <= 2)
-      return
+      if (ahead >= 125 && ahead <= 180 && !this.announced.has(`${key}:prepare`)) {
+        this.announced.add(`${key}:prepare`)
+        this.say(`استعد · ${describeNote(note, ahead)}`, `استعد ${dir} ${note.grade}`)
+        return
+      }
+      if (ahead >= 42 && ahead < 125 && !this.announced.has(`${key}:call`)) {
+        this.announced.add(`${key}:call`)
+        this.say(describeNote(note, ahead), `${dir} ${note.grade}${note.grade <= 2 ? '، اكبح' : ''}`, note.grade <= 2)
+        return
+      }
     }
   }
 
@@ -873,11 +879,24 @@ export class RallyGame {
       rival.decisionTimer -= dt
       if (rival.decisionTimer <= 0) {
         const laneRoll = this.nextRivalRandom(rival)
-        rival.targetLane = laneRoll < 0.17
-          ? (this.nextRivalRandom(rival) < 0.5 ? -1 : 1) * laneLimit * 0.82
-          : (this.nextRivalRandom(rival) * 2 - 1) * laneLimit * 0.8
+        const playerAhead = this.trackDistance - rival.distance
+        const playerClose = Math.abs(playerAhead) < 26 && Math.abs(this.laneOffset - rival.lane) < 4.8
+        const traffic = this.rivals
+          .filter(other => other !== rival && Math.abs(other.distance - rival.distance) < 22 && Math.abs(other.lane - rival.lane) < 3.8)
+          .sort((a, b) => Math.abs(a.distance - rival.distance) - Math.abs(b.distance - rival.distance))[0]
+        const threatLane = playerClose ? this.laneOffset : traffic?.lane
+        if (threatLane !== undefined) {
+          const preferredSide = rival.lane <= threatLane ? -1 : 1
+          const alternate = THREE.MathUtils.clamp(threatLane + preferredSide * 3.5, -laneLimit * 0.82, laneLimit * 0.82)
+          rival.targetLane = Math.abs(alternate - threatLane) > 2.2 ? alternate : -alternate
+        } else {
+          rival.targetLane = laneRoll < 0.17
+            ? (this.nextRivalRandom(rival) < 0.5 ? -1 : 1) * laneLimit * 0.82
+            : (this.nextRivalRandom(rival) * 2 - 1) * laneLimit * 0.8
+        }
         const pace = 0.73 + this.stageNumber * 0.0017 + (this.nextRivalRandom(rival) - 0.5) * 0.11
-        rival.targetSpeed = CONFIG.race.maxSpeed * pace * CAR_ABILITIES[rival.ability].topSpeed
+        const closingBoost = playerAhead > 0 && playerAhead < 38 ? 1.045 : 1
+        rival.targetSpeed = CONFIG.race.maxSpeed * pace * CAR_ABILITIES[rival.ability].topSpeed * closingBoost
         rival.decisionTimer = 0.85 + this.nextRivalRandom(rival) * 1.75
       }
       const ability = CAR_ABILITIES[rival.ability]
