@@ -5,6 +5,7 @@ import { buildPaceNotes, gradeFor, turnAngle } from './pace-notes'
 import { lookFor, parseGarage } from './customization'
 import { parseSave } from '../engine/save'
 import { advanceLateralMotion } from './handling'
+import { shapeAnalogStick, smoothControl } from '../engine/input'
 import { buildStageRoutePoints } from './rally-track'
 import * as THREE from 'three'
 import { ParticlePool, SkidMarks } from './vfx'
@@ -165,5 +166,29 @@ describe('rally visual effect pools', () => {
     marks.add(new THREE.Vector3(3, 0, 4), 0)
     marks.mesh.getMatrixAt(0, matrix)
     expect([matrix.elements[0], matrix.elements[5], matrix.elements[10]]).toEqual([1, 1, 1])
+  })
+})
+
+
+describe('precision driving controls', () => {
+  it('filters stick drift while preserving full steering range', () => {
+    expect(shapeAnalogStick(0.05, -0.04)).toEqual({ x: 0, y: 0 })
+    const full = shapeAnalogStick(1, 0)
+    expect(full.x).toBeCloseTo(1, 8)
+    expect(full.y).toBe(0)
+  })
+
+  it('keeps diagonal stick input within the unit circle', () => {
+    const diagonal = shapeAnalogStick(1, 1)
+    expect(Math.hypot(diagonal.x, diagonal.y)).toBeCloseTo(1, 8)
+    expect(diagonal.x).toBeCloseTo(diagonal.y, 8)
+  })
+
+  it('smooths control changes and snaps safely when no time elapses', () => {
+    expect(smoothControl(0, 1, 0)).toBe(0)
+    const first = smoothControl(0, 1, 1 / 60)
+    expect(first).toBeGreaterThan(0)
+    expect(first).toBeLessThan(1)
+    expect(smoothControl(first, 1, 1 / 60)).toBeGreaterThan(first)
   })
 })

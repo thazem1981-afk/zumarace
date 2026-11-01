@@ -351,11 +351,12 @@ export class RallyGame {
     const previousSpeed = this.speed
     const manualThrottle = Math.max(0, this.input.move.y, this.input.held('throttle') ? 1 : 0)
     const reverse = Math.max(0, -this.input.move.y)
-    const brake = this.input.held('brake') || reverse > 0
+    const brakePower = Math.max(this.input.brakeAmount, this.input.held('brake') ? 1 : 0, reverse)
+    const brake = brakePower > 0.06
     this.braking = brake && this.speed > 3
     const turboType = TURBO_TYPES.find(item => item.id === this.progress.selectedTurbo)
     const turboHeld = this.input.held('turbo') && !!turboType && this.nitro > 0.01 && !this.crashTimer
-    const drift = (this.input.held('drift') || brake) && this.speed > 7
+    const drift = (this.input.held('drift') || brakePower > 0.62) && this.speed > 7
     this.driftActive = drift
     this.nitroEffect = turboHeld ? Math.min(1, this.nitroEffect + dt * 3.8) : Math.max(0, this.nitroEffect - dt * 2.6)
 
@@ -369,7 +370,6 @@ export class RallyGame {
       this.speed = Math.max(4, this.speed - 11 * dt)
       if (this.crashTimer === 0) this.lateralVelocity *= -0.28
     } else if (brake) {
-      const brakePower = this.input.held('brake') ? 1 : reverse
       if (this.speed > 0.8) this.speed = Math.max(0, this.speed - CONFIG.race.brakeForce * brakePower * dt)
       else this.speed = Math.max(-6, this.speed - CONFIG.race.reverseForce * Math.max(brakePower, 0.6) * dt)
     } else if (manualThrottle > 0) {
