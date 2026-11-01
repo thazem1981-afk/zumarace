@@ -74,3 +74,14 @@ body, #ui { color: #fff6e8 }
 .codriver { padding: 9px 17px; min-width: min(260px, 72vw); justify-content: center; text-align: center }
 .codriver small { margin-bottom: 2px }
 @media (max-width: 560px) { .hud-voice { width: 36px; height: 36px; font-size: 16px } }
+
+/* Garage lists remain scrollable without squeezing the car cards on touch screens. */
+@media (max-width: 820px) {
+  .garage-content { width:100%; max-height:calc(100% - 76px); }
+  .garage-main { overflow:visible; }
+  .garage-main .car-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 560px) {
+  .garage-main .car-grid { grid-template-columns:1fr; }
+  .garage-content { gap:12px; }
+}
