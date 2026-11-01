@@ -221,5 +221,6 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   vehicle.userData.frontAxles = frontAxles
   vehicle.userData.wheelAxles = wheelAxles
   vehicle.userData.tailLamp = tail
+  vehicle.userData.headLamp = lamp
   return vehicle
 }
