@@ -12,8 +12,8 @@ import { buildRealisticCar } from './vehicle'
 import { DEFAULT_LOOK, lookFor, type CarLook, type Garage } from './customization'
 import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './characters'
 import { ParticlePool, SkidMarks } from './vfx'
-import { describeNote } from './pace-notes'
-import { advanceLateralMotion } from './handling'
+import { describeNote, paceNotePhase } from './pace-notes'
+import { advanceLateralMotion, passingLane } from './handling'
 import type { CameraMode } from '../engine/save'
 
 export type RallyMode = 'attract' | 'countdown' | 'playing' | 'paused' | 'ended'
@@ -556,12 +556,13 @@ export class RallyGame {
       const ahead = (note.distance - here + L) % L
       const key = `${lap}:${i}`
       const dir = note.direction === 'left' ? 'يسار' : 'يمين'
-      if (ahead >= 125 && ahead <= 180 && !this.announced.has(`${key}:prepare`)) {
+      const phase = paceNotePhase(ahead)
+      if (phase === 'prepare' && !this.announced.has(`${key}:prepare`)) {
         this.announced.add(`${key}:prepare`)
         this.say(`استعد · ${describeNote(note, ahead)}`, `استعد ${dir} ${note.grade}`)
         return
       }
-      if (ahead >= 42 && ahead < 125 && !this.announced.has(`${key}:call`)) {
+      if (phase === 'call' && !this.announced.has(`${key}:call`)) {
         this.announced.add(`${key}:call`)
         this.say(describeNote(note, ahead), `${dir} ${note.grade}${note.grade <= 2 ? '، اكبح' : ''}`, note.grade <= 2)
         return
@@ -885,11 +886,7 @@ export class RallyGame {
           .filter(other => other !== rival && Math.abs(other.distance - rival.distance) < 22 && Math.abs(other.lane - rival.lane) < 3.8)
           .sort((a, b) => Math.abs(a.distance - rival.distance) - Math.abs(b.distance - rival.distance))[0]
         const threatLane = playerClose ? this.laneOffset : traffic?.lane
-        if (threatLane !== undefined) {
-          const preferredSide = rival.lane <= threatLane ? -1 : 1
-          const alternate = THREE.MathUtils.clamp(threatLane + preferredSide * 3.5, -laneLimit * 0.82, laneLimit * 0.82)
-          rival.targetLane = Math.abs(alternate - threatLane) > 2.2 ? alternate : -alternate
-        } else {
+        if (threatLane !== undefined) rival.targetLane = passingLane(rival.lane, threatLane, laneLimit * 0.82) else {
           rival.targetLane = laneRoll < 0.17
             ? (this.nextRivalRandom(rival) < 0.5 ? -1 : 1) * laneLimit * 0.82
             : (this.nextRivalRandom(rival) * 2 - 1) * laneLimit * 0.8
