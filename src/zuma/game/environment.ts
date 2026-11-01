@@ -59,6 +59,17 @@ export const WEATHER_GRIP: Readonly<Record<WeatherId, number>> = Object.freeze({
   clear: 1, cloudy: 1, fog: 0.97, rain: 0.82, snow: 0.72, sandstorm: 0.9,
 })
 
+/** Smooth, deterministic wind vectors used by weather particles (world units per second). */
+export function windForWeather(weather: WeatherId, time: number): Readonly<{ x: number; z: number }> {
+  const t = Number.isFinite(time) ? time : 0
+  const gust = Math.sin(t * 0.7)
+  const crosswind = Math.sin(t * 0.31 + 1.2)
+  if (weather === 'sandstorm') return { x: 18 + gust * 8, z: crosswind * 5 }
+  if (weather === 'rain') return { x: 2 + gust * 2, z: crosswind * 1.5 }
+  if (weather === 'snow') return { x: 1.2 + gust * 0.8, z: crosswind * 1.4 }
+  return { x: 0, z: 0 }
+}
+
 /** Off-line drag scale by surface: loose surfaces slow a car leaving the racing line more. */
 export const SURFACE_DRAG: Readonly<Record<SurfaceId, number>> = Object.freeze({
   tarmac: 1.25, gravel: 1, sand: 1, mud: 1.15, snow: 0.9,
