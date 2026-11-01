@@ -11,7 +11,7 @@ import { Input } from './engine/input'
 import { GameLoop } from './engine/loop'
 import { SAVE_KEY, SaveStore, type SaveData } from './engine/save'
 import { buyCar, buyTurbo, buyUpgrade, selectCar, selectTurbo, type CarId, type TurboTypeId, type UpgradeKind } from './game/campaign'
-import { RallyGame, type RallyMode } from './game/rally-game'
+import { RallyGame } from './game/rally-game'
 import { TouchControls } from './ui/touch'
 import { RallyUi } from './ui/rally-ui'
 
