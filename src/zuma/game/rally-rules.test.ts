@@ -12,6 +12,16 @@ import { buildStageRoutePoints } from './rally-track'
 import * as THREE from 'three'
 import { ParticlePool, SkidMarks } from './vfx'
 
+describe('custom garage paint', () => {
+  it('accepts custom six-digit paint and rim colours and rejects invalid values', () => {
+    const parsed = parseGarage({ 'dune-runner': { paint: '#123abc', rim: '#abcdef' }, 'sand-hawk': { paint: 'red', rim: '#12' } }, new Set(CAMPAIGN_CARS.map(car => car.id)))
+    expect(parsed['dune-runner']?.paint).toBe('#123abc')
+    expect(parsed['dune-runner']?.rim).toBe('#abcdef')
+    expect(parsed['sand-hawk']?.paint).toBeNull()
+    expect(parsed['sand-hawk']?.rim).toBe('#aeb5b9')
+  })
+})
+
 describe('stage variety', () => {
   it('consecutive stages never share a biome', () => {
     for (let s = 1; s < 100; s += 1) expect(biomeForStage(s).id).not.toBe(biomeForStage(s + 1).id)
