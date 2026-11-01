@@ -6,6 +6,8 @@ import { lookFor, parseGarage } from './customization'
 import { parseSave } from '../engine/save'
 import { advanceLateralMotion } from './handling'
 import { buildStageRoutePoints } from './rally-track'
+import * as THREE from 'three'
+import { ParticlePool, SkidMarks } from './vfx'
 
 describe('stage variety', () => {
   it('consecutive stages never share a biome', () => {
@@ -138,5 +140,33 @@ describe('procedural rally routes', () => {
     const first = buildStageRoutePoints(12)
     const next = buildStageRoutePoints(13)
     expect(first.map(p => p.toArray())).not.toEqual(next.map(p => p.toArray()))
+  })
+})
+
+
+describe('rally visual effect pools', () => {
+  it('clears particle visibility and resets its emission cursor', () => {
+    const pool = new ParticlePool(2)
+    pool.emit(new THREE.Vector3(1, 0.2, 2), new THREE.Vector3(0, 1, 0), new THREE.Color(0xffffff), 1, 1)
+    pool.clear()
+    expect(Array.from(pool.points.geometry.getAttribute('color').array)).toEqual(new Array(8).fill(0))
+    expect(Array.from(pool.points.geometry.getAttribute('psize').array)).toEqual(new Array(2).fill(0))
+    pool.emit(new THREE.Vector3(3, 0.2, 4), new THREE.Vector3(0, 1, 0), new THREE.Color(0xffffff), 1, 1)
+    expect(pool.points.geometry.getAttribute('position').array.slice(0, 3)).toEqual(new Float32Array([3, 0.2, 4]))
+  })
+
+  it('clears skid marks and restarts the ring buffer at its first slot', () => {
+    const marks = new SkidMarks(2)
+    marks.add(new THREE.Vector3(1, 0, 2), 0)
+    marks.clear()
+    const matrix = new THREE.Matrix4()
+    marks.mesh.getMatrixAt(0, matrix)
+    const scale = new THREE.Vector3()
+    matrix.decompose(new THREE.Vector3(), new THREE.Quaternion(), scale)
+    expect(scale.toArray()).toEqual([0, 0, 0])
+    marks.add(new THREE.Vector3(3, 0, 4), 0)
+    marks.mesh.getMatrixAt(0, matrix)
+    matrix.decompose(new THREE.Vector3(), new THREE.Quaternion(), scale)
+    expect(scale.toArray()).toEqual([1, 1, 1])
   })
 })
