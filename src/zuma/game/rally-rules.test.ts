@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BIOME_ORDER, biomeForStage, conditionsForStage, WEATHER_GRIP, windForWeather } from './environment'
+import { BIOME_ORDER, biomeForStage, conditionsForStage, gripForConditions, SURFACE_GRIP, WEATHER_GRIP, windForWeather } from './environment'
 import { CAMPAIGN_CARS, CAMPAIGN_STAGES } from './campaign'
 import { buildPaceNotes, gradeFor, turnAngle } from './pace-notes'
 import { lookFor, parseGarage } from './customization'
@@ -190,5 +190,22 @@ describe('precision driving controls', () => {
     expect(first).toBeGreaterThan(0)
     expect(first).toBeLessThan(1)
     expect(smoothControl(first, 1, 1 / 60)).toBeGreaterThan(first)
+  })
+})
+
+
+describe('surface-aware rally grip', () => {
+  it('gives tarmac more grip than loose sand and snow', () => {
+    expect(SURFACE_GRIP.tarmac).toBeGreaterThan(SURFACE_GRIP.sand)
+    expect(SURFACE_GRIP.sand).toBeGreaterThan(SURFACE_GRIP.snow)
+  })
+
+  it('reduces road grip in rain and snow', () => {
+    expect(gripForConditions('tarmac', 'rain')).toBeLessThan(gripForConditions('tarmac', 'clear'))
+    expect(gripForConditions('gravel', 'snow')).toBeLessThan(gripForConditions('gravel', 'cloudy'))
+  })
+
+  it('keeps clear-weather grip stable at zero weather intensity', () => {
+    expect(gripForConditions('gravel', 'rain', 0)).toBe(SURFACE_GRIP.gravel)
   })
 })
