@@ -761,6 +761,24 @@ export class RallyGame {
     nitro.visible = false
     wrapper.add(nitro)
     wrapper.userData.nitroFlame = nitro
+
+    // Imported GLB cars do not expose the procedural car's tail-lamp material.
+    // Add a small, consistent pair so braking feedback works across every car.
+    if (!wrapper.userData.tailLamp) {
+      const tailLamp = new THREE.MeshStandardMaterial({
+        color: 0x8c1a14,
+        emissive: 0xff2010,
+        emissiveIntensity: 0.35,
+        roughness: 0.25,
+      })
+      for (const x of [-0.66, 0.66]) {
+        const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.13, 0.06), tailLamp)
+        lamp.name = 'zuma-fallback-tail-lamp'
+        lamp.position.set(x, 0.82, -2.16)
+        wrapper.add(lamp)
+      }
+      wrapper.userData.tailLamp = tailLamp
+    }
   }
 
   private updateVehicleEffects(body: THREE.Group, speed: number, lateral: number, nitro: number, drifting: boolean, dt: number): void {
