@@ -125,7 +125,7 @@ export class Atmosphere {
     const dir = this.sunDirection()
     this.sun.position.copy(focus).addScaledVector(dir, 160)
     this.sun.target.position.copy(focus)
-    if (this.precip.visible) this.updatePrecip(dt, focus)
+    if (this.precip.visible) this.updatePrecip(dt, focus, reducedMotion)
   }
 
   private sunDirection(): THREE.Vector3 {
@@ -174,14 +174,18 @@ export class Atmosphere {
     return { top: c(a.top, b.top), horizon: c(a.horizon, b.horizon), sun: c(a.sun, b.sun), sunI: THREE.MathUtils.lerp(a.sunI, b.sunI, f), amb: THREE.MathUtils.lerp(a.amb, b.amb, f), fog: c(a.fog, b.fog) }
   }
 
-  private updatePrecip(dt: number, focus: THREE.Vector3): void {
+  private updatePrecip(dt: number, focus: THREE.Vector3, reducedMotion: boolean): void {
     const w = this.conditions.weather
     const attr = this.precip.geometry.getAttribute('position') as THREE.BufferAttribute
     const arr = attr.array as Float32Array
     const fall = w === 'rain' ? 26 : w === 'snow' ? 3.2 : 1.2
     const drift = w === 'sandstorm' ? 18 : w === 'snow' ? 1.2 : 2
-    const visibleCount = Math.floor(arr.length / 3 * (0.35 + 0.65 * this.intensity))
+    const visibleCount = Math.floor(arr.length / 3 * (reducedMotion ? 0.08 : 0.35 + 0.65 * this.intensity))
     this.precip.geometry.setDrawRange(0, visibleCount)
+    if (reducedMotion) {
+      this.precip.position.set(focus.x, 0, focus.z)
+      return
+    }
     for (let i = 0; i < visibleCount; i += 1) {
       const o = i * 3
       const v = this.precipVel[i]

@@ -4,6 +4,8 @@ import { CAMPAIGN_CARS, CAMPAIGN_STAGES } from './campaign'
 import { buildPaceNotes, gradeFor, turnAngle } from './pace-notes'
 import { lookFor, parseGarage } from './customization'
 import { parseSave } from '../engine/save'
+import { advanceLateralMotion } from './handling'
+import { buildStageRoutePoints } from './rally-track'
 
 describe('stage variety', () => {
   it('consecutive stages never share a biome', () => {
@@ -66,5 +68,50 @@ describe('garage customisation', () => {
     const s = parseSave(JSON.stringify({ version: 2, cameraMode: 'hood', driver: 'layla' }))
     expect(s.cameraMode).toBe('hood')
     expect(s.driver).toBe('layla')
+  })
+})
+
+describe('rally lateral handling', () => {
+  const base = { steer: 1, speed: 24, steeringForce: 11.5, tireGrip: 1, steeringSkill: 1, drifting: false, lateralVelocity: 0, dt: 1 / 60 }
+
+  it('limits lateral acceleration to available tyre grip', () => {
+    const next = advanceLateralMotion(base)
+    const maximum = 9.81 * base.tireGrip * base.dt
+    expect(next).toBeGreaterThan(0)
+    expect(next).toBeLessThanOrEqual(maximum)
+  })
+
+  it('reduces cornering force on a low-grip surface', () => {
+    const dry = advanceLateralMotion(base)
+    const wet = advanceLateralMotion({ ...base, tireGrip: 0.55 })
+    expect(wet).toBeLessThan(dry)
+  })
+
+  it('lets a drift carry more sideways momentum after steering input ends', () => {
+    const normal = advanceLateralMotion({ ...base, steer: 0, lateralVelocity: 5 })
+    const drifting = advanceLateralMotion({ ...base, steer: 0, drifting: true, lateralVelocity: 5 })
+    expect(drifting).toBeGreaterThan(normal)
+  })
+
+  it('is stable for zero or negative time steps and bounds lateral speed', () => {
+    expect(advanceLateralMotion({ ...base, dt: 0, lateralVelocity: 3 })).toBe(3)
+    expect(advanceLateralMotion({ ...base, dt: -1, lateralVelocity: 3 })).toBe(3)
+    expect(advanceLateralMotion({ ...base, lateralVelocity: 30 })).toBeLessThanOrEqual(12)
+  })
+})
+
+describe('procedural rally routes', () => {
+  it('builds deterministic, finite closed-course control points', () => {
+    const first = buildStageRoutePoints(12)
+    const repeated = buildStageRoutePoints(12)
+    expect(first).toHaveLength(56)
+    expect(first.map(p => p.toArray())).toEqual(repeated.map(p => p.toArray()))
+    expect(first.every(p => Number.isFinite(p.x) && Number.isFinite(p.z))).toBe(true)
+  })
+
+  it('changes course geometry between stages', () => {
+    const first = buildStageRoutePoints(12)
+    const next = buildStageRoutePoints(13)
+    expect(first.map(p => p.toArray())).not.toEqual(next.map(p => p.toArray()))
   })
 })
