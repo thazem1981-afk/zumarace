@@ -6,6 +6,7 @@ import { lookFor, parseGarage } from './customization'
 import { parseSave } from '../engine/save'
 import { advanceLateralMotion, passingLane } from './handling'
 import { shapeAnalogStick, smoothControl } from '../engine/input'
+import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear } from './transmission'
 import { buildStageRoutePoints } from './rally-track'
 import * as THREE from 'three'
 import { ParticlePool, SkidMarks } from './vfx'
@@ -228,5 +229,26 @@ describe('rally racecraft helpers', () => {
     expect(paceNotePhase(90)).toBe('call')
     expect(paceNotePhase(30)).toBeNull()
     expect(paceNotePhase(Number.NaN)).toBeNull()
+  })
+})
+
+
+describe('rally transmission', () => {
+  it('shifts automatically as speed rises', () => {
+    expect(automaticGear(4)).toBe(1)
+    expect(automaticGear(22)).toBe(3)
+    expect(automaticGear(52)).toBe(6)
+  })
+
+  it('keeps manual shifts within six forward gears', () => {
+    expect(shiftGear(1, -1)).toBe(1)
+    expect(shiftGear(1, 1)).toBe(2)
+    expect(shiftGear(6, 1)).toBe(6)
+  })
+
+  it('trades low-gear acceleration for higher-gear top speed', () => {
+    expect(gearAcceleration(1)).toBeGreaterThan(gearAcceleration(6))
+    expect(gearTopSpeed(6)).toBeGreaterThan(gearTopSpeed(1))
+    expect(engineRpm(0, 1)).toBe(950)
   })
 })
