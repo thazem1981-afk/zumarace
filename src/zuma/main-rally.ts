@@ -40,6 +40,7 @@ export async function boot(): Promise<void> {
   const assets = new Assets()
   let game: RallyGame | undefined
   let loop: GameLoop | undefined
+  let touchControls: TouchControls | undefined
 
   const applySettings = (data: SaveData) => {
     input.sensitivity = data.sensitivity
@@ -147,6 +148,8 @@ export async function boot(): Promise<void> {
   const updatePause = () => {
     if (game?.mode !== 'playing' && game?.mode !== 'countdown') return
     game.pause()
+    touchControls?.cancelAll()
+    input.releaseAll()
     ui.show('pause')
     audio.stopMusic()
     audio.updateEngine(0, 0, false, false)
@@ -204,7 +207,7 @@ export async function boot(): Promise<void> {
       },
     })
     loop.start()
-    new TouchControls(document.getElementById('ui')!, input, () => g.mode === 'playing')
+    touchControls = new TouchControls(document.getElementById('ui')!, input, () => g.mode === 'playing')
 
     window.addEventListener('rally:pause', updatePause)
     window.addEventListener('rally:retry-load', () => location.reload())
