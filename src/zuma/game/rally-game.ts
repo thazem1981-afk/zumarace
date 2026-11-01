@@ -15,9 +15,10 @@ import { ParticlePool, SkidMarks } from './vfx'
 import { describeNote, paceNotePhase } from './pace-notes'
 import { advanceLateralMotion, passingLane } from './handling'
 import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear, type TransmissionMode } from './transmission'
+import { sampleReplay, type ReplayFrame } from './replay'
 import type { CameraMode } from '../engine/save'
 
-export type RallyMode = 'attract' | 'countdown' | 'playing' | 'paused' | 'ended'
+export type RallyMode = 'attract' | 'countdown' | 'playing' | 'paused' | 'ended' | 'replay'
 export type RallyResult = {
   won: boolean
   stage: number
@@ -28,6 +29,7 @@ export type RallyResult = {
   unlockedStage: number
   nextStage: number
   unranked: boolean
+  hasReplay: boolean
 }
 export type RallyHud = {
   stage: number
@@ -124,7 +126,11 @@ export class RallyGame {
   private countdownRemaining = 0
   private lastCountdownCue = 3
   private startSignalTime = 0
-  private pausedMode: 'countdown' | 'playing' = 'playing'
+  private pausedMode: 'countdown' | 'playing' | 'replay' = 'playing'
+  private readonly replayFrames: ReplayFrame[] = []
+  private replayCaptureTimer = 0
+  private replayPlaybackTime = 0
+  private lastResult?: RallyResult
   private raceRunNumber = 0
   cameraMode: CameraMode = 'chase'
   transmissionMode: TransmissionMode = 'automatic'
@@ -211,6 +217,10 @@ export class RallyGame {
     this.gear = 1
     this.nitro = this.progress.selectedTurbo ? 1 : 0
     this.elapsed = 0
+    this.replayFrames.length = 0
+    this.replayCaptureTimer = 0
+    this.replayPlaybackTime = 0
+    this.lastResult = undefined
     this.crashTimer = 0
     this.crashCooldown = 0
     this.impacts = 0
@@ -244,10 +254,11 @@ export class RallyGame {
     this.audio.unlock()
     this.audio.play('countdown')
     this.resetCarPose()
+    this.recordReplayFrame(true)
   }
 
   pause(): void {
-    if (this.mode === 'playing' || this.mode === 'countdown') {
+    if (this.mode === 'playing' || this.mode === 'countdown' || this.mode === 'replay') {
       this.pausedMode = this.mode
       this.mode = 'paused'
     }
@@ -270,6 +281,55 @@ export class RallyGame {
     this.bodyYaw = 0
     this.bodyRoll = 0
     this.resetCarPose()
+  }
+
+  playReplay(): boolean {
+    if (this.replayFrames.length < 2 || !this.lastResult) return false
+    this.replayPlaybackTime = 0
+    this.mode = 'replay'
+    this.camera.userData.ready = false
+    this.audio.stopMusic()
+    this.audio.updateEngine(0, 0, false, false)
+    return true
+  }
+
+  private recordReplayFrame(force = false): void {
+    if (!force && this.replayCaptureTimer < 0.1) return
+    this.replayCaptureTimer = 0
+    const previous = this.replayFrames[this.replayFrames.length - 1]
+    if (previous && this.elapsed <= previous.time) return
+    this.replayFrames.push({
+      time: this.elapsed,
+      distance: this.trackDistance,
+      lane: this.laneOffset,
+      speed: this.speed,
+      lateralVelocity: this.lateralVelocity,
+      longitudinalAccel: this.longitudinalAccel,
+      steerInput: this.steerInput,
+      drifting: this.driftActive,
+      braking: this.braking,
+      rivals: this.rivals.map(rival => ({ distance: rival.distance, lane: rival.lane })),
+    })
+    if (this.replayFrames.length > 600) this.replayFrames.shift()
+  }
+
+  private applyReplayFrame(): void {
+    const frame = sampleReplay(this.replayFrames, this.replayPlaybackTime)
+    if (!frame) return
+    this.trackDistance = frame.distance
+    this.laneOffset = frame.lane
+    this.speed = frame.speed
+    this.lateralVelocity = frame.lateralVelocity
+    this.longitudinalAccel = frame.longitudinalAccel
+    this.steerInput = frame.steerInput
+    this.driftActive = frame.drifting
+    this.braking = frame.braking
+    for (const [index, rival] of this.rivals.entries()) {
+      const snapshot = frame.rivals[index]
+      if (!snapshot) continue
+      rival.distance = snapshot.distance
+      rival.lane = snapshot.lane
+    }
   }
 
   setQuality(quality: 'low' | 'medium' | 'high'): void {
@@ -337,6 +397,18 @@ export class RallyGame {
   }
 
   step(dt: number): void {
+    if (this.mode === 'replay') {
+      this.audio.updateEngine(0, 0, false, false)
+      this.replayPlaybackTime += dt
+      const last = this.replayFrames[this.replayFrames.length - 1]
+      if (last && this.replayPlaybackTime >= last.time) {
+        this.replayPlaybackTime = last.time
+        this.applyReplayFrame()
+        this.mode = 'ended'
+        if (this.lastResult) this.hooks.result(this.lastResult)
+      }
+      return
+    }
     if (this.mode === 'countdown') {
       this.audio.updateEngine(0, 0, false, false)
       this.impactResetNoticeSeconds = Math.max(0, this.impactResetNoticeSeconds - dt)
@@ -358,6 +430,7 @@ export class RallyGame {
     this.coDriverTimer = Math.max(0, this.coDriverTimer - dt)
     this.startSignalTime = Math.max(0, this.startSignalTime - dt)
     this.elapsed += dt
+    this.replayCaptureTimer += dt
     this.crashCooldown = Math.max(0, this.crashCooldown - dt)
     const previousSpeed = this.speed
     const manualThrottle = Math.max(0, this.input.move.y, this.input.held('throttle') ? 1 : 0)
@@ -439,6 +512,7 @@ export class RallyGame {
     if (this.crashTimer <= 0) this.trackDistance = Math.max(0, this.trackDistance + this.speed * dt)
     this.updateRivals(dt)
     if (this.mode !== 'playing') return
+    this.recordReplayFrame()
     this.updateCoDriver()
     this.checkHazards()
     this.checkRivalCollision()
@@ -456,10 +530,11 @@ export class RallyGame {
 
   render(_alpha: number, frameSeconds: number): void {
     this.time += frameSeconds
-    if (this.mode === 'playing' || this.mode === 'countdown') {
+    if (this.mode === 'playing' || this.mode === 'countdown' || this.mode === 'replay') {
       if (this.input.consume('camera')) this.cycleCamera()
     }
-    this.atmosphere.update(frameSeconds, this.vehicle.position, this.mode === 'playing', this.reducedMotion)
+    if (this.mode === 'replay') this.applyReplayFrame()
+    this.atmosphere.update(frameSeconds, this.vehicle.position, this.mode === 'playing' || this.mode === 'replay', this.reducedMotion)
     this.track.setWetness(this.atmosphere.wetness)
     if ((this.mode === 'attract' || this.mode === 'ended') && Math.abs(this.camera.fov - CONFIG.camera.fov) > 0.01) {
       this.camera.fov = CONFIG.camera.fov
@@ -476,7 +551,7 @@ export class RallyGame {
       this.body.rotation.set(0, this.bodyYaw, this.rollAngle())
     } else {
       const dt = Math.max(0, frameSeconds)
-      const activeDrive = this.mode === 'playing' && !this.reducedMotion
+      const activeDrive = (this.mode === 'playing' || this.mode === 'replay') && !this.reducedMotion
       // Chassis weight transfer: braking loads the nose, throttle lifts it, and cornering loads the outside tyres.
       const targetPitch = activeDrive ? THREE.MathUtils.clamp(-this.longitudinalAccel * 0.0052, -0.12, 0.12) : 0
       const lateralRatio = this.lateralVelocity / Math.max(8, Math.abs(this.speed))
@@ -1050,7 +1125,8 @@ export class RallyGame {
       }
     }
     this.audio.play(won ? 'win' : 'lose')
-    this.hooks.result({
+    this.recordReplayFrame(true)
+    const result: RallyResult = {
       won,
       stage: this.stageNumber,
       stageName: this.currentStage.name,
@@ -1060,7 +1136,10 @@ export class RallyGame {
       unlockedStage: this.progress.unlockedStage,
       nextStage: Math.min(100, this.stageNumber + 1),
       unranked: this.unranked,
-    })
+      hasReplay: this.replayFrames.length > 1,
+    }
+    this.lastResult = result
+    this.hooks.result(result)
   }
 }
 
