@@ -135,6 +135,7 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   }
   const L = p.length / 2
   const W = p.width / 2
+  const r = p.wheel
 
   // Give the front and rear ends a layered, rally-built appearance instead of plain blocks.
   const bumperMat = new THREE.MeshStandardMaterial({ color: 0x292d31, roughness: 0.62, metalness: 0.28 })
@@ -245,7 +246,6 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   const wheels: THREE.Object3D[] = []
   const frontAxles: THREE.Group[] = []
   const wheelAxles: THREE.Group[] = []
-  const r = p.wheel
   const tireGeo = new THREE.CylinderGeometry(r, r, 0.32, 24)
   tireGeo.rotateZ(Math.PI / 2)
   const treadGeo = new THREE.BoxGeometry(0.34, 0.05, 0.12)
