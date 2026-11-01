@@ -285,7 +285,7 @@ export class RallyGame {
 
   playReplay(): boolean {
     if (this.replayFrames.length < 2 || !this.lastResult) return false
-    this.replayPlaybackTime = 0
+    this.replayPlaybackTime = this.replayFrames[0].time
     this.mode = 'replay'
     this.camera.userData.ready = false
     this.audio.stopMusic()
@@ -749,7 +749,7 @@ export class RallyGame {
       // Headlamp lenses brighten with the beam so cars read clearly in night and poor weather.
       if (head) head.emissiveIntensity = 0.6 + lightsOn * 2.8
     }
-    apply(this.body, this.braking && this.mode === 'playing')
+    apply(this.body, this.braking && (this.mode === 'playing' || this.mode === 'replay'))
     for (const r of this.rivals) apply(r.body, false)
   }
 
