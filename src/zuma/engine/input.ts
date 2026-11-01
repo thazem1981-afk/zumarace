@@ -26,7 +26,7 @@ const MOVE_KEYS = {
 }
 // Standard gamepad: A=0, B=1, X=2, LB=4, RB=5, LT=6, RT=7, Start=9.
 const PAD_BINDINGS: Record<Action, number[]> = {
-  brake: [6], drift: [4], turbo: [2, 5], throttle: [], jump: [0], dash: [2, 5], sprint: [4, 10],
+  brake: [], drift: [4], turbo: [2, 5], throttle: [], jump: [0], dash: [2, 5], sprint: [4, 10],
   pause: [9], confirm: [0], back: [1], interact: [], camera: [3],
 }
 
@@ -39,6 +39,8 @@ export class Input {
   /** Driving steering sensitivity, adjustable in Settings. */
   sensitivity = 1
   invertY = false
+  /** Analog left-trigger pressure, used for progressive braking on gamepads. */
+  brakeAmount = 0
 
   private keys = new Set<string>()
   private held_ = new Set<Action>()
@@ -80,8 +82,9 @@ export class Input {
   /** Touch controls feed steering/throttle from the virtual stick and actions from buttons. */
   setTouchMove(x: number, y: number): void {
     this.method = 'touch'
-    this.touchMove.x = clamp(x, -1, 1)
-    this.touchMove.y = clamp(y, -1, 1)
+    const shaped = shapeAnalogStick(x, y)
+    this.touchMove.x = shaped.x
+    this.touchMove.y = shaped.y
   }
 
   setTouchButton(action: Action, down: boolean): void {
@@ -98,11 +101,12 @@ export class Input {
   }
 
   /** Sample once per rendered frame. */
-  update(_frameSeconds?: number): void {
+  update(frameSeconds = 1 / 60): void {
     const k = (codes: string[]) => codes.some(code => this.keys.has(code))
     let x = (k(MOVE_KEYS.right) ? 1 : 0) - (k(MOVE_KEYS.left) ? 1 : 0)
     let y = (k(MOVE_KEYS.up) ? 1 : 0) - (k(MOVE_KEYS.down) ? 1 : 0)
     this.held_.clear()
+    this.brakeAmount = 0
     for (const [action, codes] of Object.entries(KEY_BINDINGS) as [Action, string[]][]) {
       if (k(codes)) this.held_.add(action)
     }
@@ -118,12 +122,14 @@ export class Input {
       this.padIndex = pad.index
       this.padId = pad.id
       const dead = (v: number) => Math.abs(v) < 0.16 ? 0 : Math.sign(v) * ((Math.abs(v) - 0.16) / 0.84)
-      const lx = dead(pad.axes[0] ?? 0)
-      const ly = dead(pad.axes[1] ?? 0)
+      const stick = shapeAnalogStick(pad.axes[0] ?? 0, pad.axes[1] ?? 0)
+      const lx = stick.x
+      const ly = stick.y
       const dx = (pad.buttons[15]?.pressed ? 1 : 0) - (pad.buttons[14]?.pressed ? 1 : 0)
       const dy = (pad.buttons[12]?.pressed ? 1 : 0) - (pad.buttons[13]?.pressed ? 1 : 0)
       const rt = clamp(pad.buttons[7]?.value ?? 0, 0, 1)
       const lt = clamp(pad.buttons[6]?.value ?? 0, 0, 1)
+      this.brakeAmount = lt
       const padActive = lx !== 0 || ly !== 0 || dx !== 0 || dy !== 0 || rt > 0.08 || lt > 0.08 || pad.buttons.some(b => b.pressed)
       if (padActive) this.method = 'gamepad'
       if (lx !== 0 || ly !== 0 || dx !== 0 || dy !== 0) {
@@ -138,8 +144,9 @@ export class Input {
       this.padPrev = pad.buttons.map(b => b.pressed)
     } else this.resetPad()
 
-    this.move.x = clamp(x, -1, 1)
-    this.move.y = clamp(y, -1, 1)
+    const dt = clamp(frameSeconds, 0, 0.05)
+    this.move.x = smoothControl(this.move.x, clamp(x, -1, 1), dt)
+    this.move.y = smoothControl(this.move.y, clamp(y, -1, 1), dt)
   }
 
   held(action: Action): boolean { return this.held_.has(action) }
@@ -154,6 +161,7 @@ export class Input {
     this.touchMove.x = 0
     this.touchMove.y = 0
     this.touchButtons.clear()
+    this.brakeAmount = 0
     this.held_.clear()
     this.pressed_.clear()
     this.move.x = 0
@@ -191,4 +199,24 @@ export class Input {
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Number.isFinite(v) ? v : 0))
+}
+
+/** Radial deadzone plus a gentle response curve keeps small corrections precise without losing full lock. */
+export function shapeAnalogStick(x: number, y: number, deadzone = 0.12): { x: number; y: number } {
+  const safeX = clamp(x, -1, 1)
+  const safeY = clamp(y, -1, 1)
+  const magnitude = Math.hypot(safeX, safeY)
+  if (magnitude <= deadzone || magnitude === 0) return { x: 0, y: 0 }
+  const normalized = clamp((magnitude - deadzone) / (1 - deadzone), 0, 1)
+  const curved = Math.pow(normalized, 1.22)
+  const scale = curved / magnitude
+  return { x: safeX * scale, y: safeY * scale }
+}
+
+/** Smooths digital and analog transitions while reacting quickly to a fresh steering command. */
+export function smoothControl(current: number, target: number, dt: number): number {
+  if (dt <= 0) return current
+  const rate = Math.abs(target) > Math.abs(current) ? 19 : 25
+  const blend = 1 - Math.exp(-rate * Math.min(dt, 0.05))
+  return current + (target - current) * blend
 }
