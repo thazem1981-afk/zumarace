@@ -45,9 +45,9 @@ export async function boot(): Promise<void> {
     input.sensitivity = data.sensitivity
     input.invertY = data.invertY
     audio.setVolumes(data.musicVolume, data.sfxVolume, data.muted)
+    audio.setEngineSoundEnabled(data.engineSound)
     if (game) {
       game.reducedMotion = data.reducedMotion
-      game.coDriverVoice = data.coDriverVoice
     }
   }
   let gameRenderer: import('./engine/renderer').Renderer | undefined
@@ -82,6 +82,7 @@ export async function boot(): Promise<void> {
     quit: () => {
       game?.toTitle()
       audio.stopMusic()
+      audio.updateEngine(0, 0, false, false)
       game?.preview(save.data.raceProgress.unlockedStage)
       ui.showTitle()
     },
@@ -148,6 +149,7 @@ export async function boot(): Promise<void> {
     game.pause()
     ui.show('pause')
     audio.stopMusic()
+    audio.updateEngine(0, 0, false, false)
   }
 
   try {
@@ -173,7 +175,6 @@ export async function boot(): Promise<void> {
       pause: updatePause,
     })
     game.reducedMotion = save.data.reducedMotion
-    game.coDriverVoice = save.data.coDriverVoice
     game.cameraMode = save.data.cameraMode
     game.setDriver(save.data.driver)
     game.setGarage(save.data.garage)

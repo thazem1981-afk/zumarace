@@ -24,3 +24,15 @@
 }
 .has-touch .touch{display:block}
 @media(max-width:560px){.speed-gauge{bottom:220px}}
+
+/* Garage selection clarity and keyboard/touch focus states. */
+.car-card { transition: transform .16s ease, border-color .16s ease, background .16s ease; }
+.car-card:hover { transform: translateY(-2px); background: linear-gradient(125deg,rgba(255,255,255,.11),rgba(255,255,255,.04)); }
+.car-card-title { display:flex; align-items:center; justify-content:space-between; gap:7px; min-width:0; }
+.car-card-title h3 { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.car-state { flex:none; padding:3px 7px; border-radius:99px; background:rgba(255,255,255,.08); color:#d6d0c5; font-size:9px; }
+.car-state.is-current { background:rgba(243,166,71,.2); color:#ffe2a5; }
+.car-state.is-owned { background:rgba(102,198,166,.13); color:#9ce0c7; }
+.car-state.is-locked { color:#c7c0b3; }
+.car-card button:focus-visible, .driver-card:focus-visible, .upgrade-panel button:focus-visible { outline:2px solid #ffe2a5; outline-offset:3px; }
+@media(max-width:560px) { .car-card { gap:9px; padding:11px; } .car-card-title h3 { font-size:14px; } }

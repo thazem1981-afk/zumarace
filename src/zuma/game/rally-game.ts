@@ -124,7 +124,6 @@ export class RallyGame {
   private pausedMode: 'countdown' | 'playing' = 'playing'
   private raceRunNumber = 0
   cameraMode: CameraMode = 'chase'
-  coDriverVoice = true
   private garage: Garage = {}
   private driver: Driver = driverById('salem')
   private readonly atmosphere: Atmosphere
@@ -328,6 +327,7 @@ export class RallyGame {
 
   step(dt: number): void {
     if (this.mode === 'countdown') {
+      this.audio.updateEngine(0, 0, false, false)
       this.impactResetNoticeSeconds = Math.max(0, this.impactResetNoticeSeconds - dt)
       this.countdownRemaining = Math.max(0, this.countdownRemaining - dt)
       const remaining = Math.ceil(this.countdownRemaining)
@@ -343,7 +343,7 @@ export class RallyGame {
       }
       return
     }
-    if (this.mode !== 'playing') return
+    if (this.mode !== 'playing') { this.audio.updateEngine(0, 0, false, false); return }
     this.coDriverTimer = Math.max(0, this.coDriverTimer - dt)
     this.startSignalTime = Math.max(0, this.startSignalTime - dt)
     this.elapsed += dt
@@ -416,6 +416,7 @@ export class RallyGame {
     }
     if (Math.abs(this.laneOffset) > this.track.width * 0.35) this.speed = Math.max(0, this.speed - 5.2 * ability.offroadDrag * SURFACE_DRAG[this.conditions.biome.surface] * dt)
     this.longitudinalAccel = (this.speed - previousSpeed) / Math.max(0.001, dt)
+    this.audio.updateEngine(this.speed, manualThrottle, turboHeld, true)
 
     if (this.crashTimer <= 0) this.trackDistance = Math.max(0, this.trackDistance + this.speed * dt)
     this.updateRivals(dt)
@@ -531,19 +532,10 @@ export class RallyGame {
     return all.sort((a, b) => b.d - a.d).map(({ name, player }) => ({ name, player }))
   }
 
-  private say(text: string, spoken: string, urgent = false): void {
+  private say(text: string, _spoken: string, urgent = false): void {
     this.coDriverText = text
     this.coDriverTimer = 3.2
     this.coDriverUrgent = urgent
-    if (!this.coDriverVoice || typeof speechSynthesis === 'undefined') return
-    try {
-      speechSynthesis.cancel()
-      const u = new SpeechSynthesisUtterance(spoken)
-      u.lang = 'ar-SA'
-      u.rate = 1.2
-      u.volume = 0.9
-      speechSynthesis.speak(u)
-    } catch { /* Voice is optional; the on-screen note still shows. */ }
   }
 
   /** Read the next corner 50–170 m ahead, once per lap. */
