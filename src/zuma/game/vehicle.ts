@@ -210,8 +210,19 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   vehicle.add(ex)
 
   if (p.bed) {
-    box([p.width * 0.86, 0.06, 1.7], [0, lift + 1.1, -L + 1.0], trim, 'bed-floor')
-    box([p.width * 0.7, 0.5, 0.5], [0, lift + 1.4, -L + 0.9], trim, 'spare')
+    // Raised bed rails and a tailgate give pickups and rally trucks a readable utility rear.
+    box([p.width * 0.86, 0.06, 1.7], [0, lift + 1.1, -L + 1.0], carbon, 'bed-floor')
+    for (const side of [-1, 1]) {
+      box([0.08, 0.42, 1.7], [side * W * 0.86, lift + 1.33, -L + 1.0], trim, 'bed-side')
+      box([0.1, 0.08, 1.7], [side * W * 0.86, lift + 1.57, -L + 1.0], alloy, 'bed-rail')
+    }
+    box([p.width * 0.86, 0.42, 0.08], [0, lift + 1.33, -L + 1.84], trim, 'tailgate')
+    box([p.width * 0.7, 0.08, 0.08], [0, lift + 1.57, -L + 1.84], alloy, 'tailgate-cap')
+    const spare = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.72, r * 0.72, 0.18, 18), tire)
+    spare.position.set(0, lift + 1.24, -L + 1.0)
+    spare.name = 'bed-spare-wheel'
+    spare.castShadow = true
+    vehicle.add(spare)
   }
   if (p.cage) {
     const tube = new THREE.MeshStandardMaterial({ color: look.rim, roughness: 0.3, metalness: 0.8 })
