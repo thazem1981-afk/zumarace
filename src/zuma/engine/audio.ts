@@ -1,9 +1,8 @@
 /**
- * Web Audio mixer with music and SFX buses. Browsers only allow audio after a user gesture, so
+ * Web Audio effects mixer. Browsers only allow audio after a user gesture, so
  * call `unlock()` from the first click/key press (the title screen does this).
  *
- * The game ships no audio files: SFX and the high-energy desert-rally music are synthesized
- * locally. To use recorded assets, `load(url)` an AudioBuffer and `playBuffer()` it on either bus.
+ * All background music has been removed. Only gameplay sound effects and engine audio remain.
  */
 export type Sfx = 'pickup' | 'jump' | 'land' | 'hurt' | 'ui' | 'win' | 'lose' | 'dash' | 'countdown' | 'start'
 
