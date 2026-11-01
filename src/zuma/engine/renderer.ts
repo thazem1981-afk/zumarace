@@ -34,8 +34,17 @@ export class Renderer {
 
   constructor(readonly canvas: HTMLCanvasElement, quality: Quality) {
     this.preset = QUALITY_PRESETS[quality]
-    this.gl = new THREE.WebGLRenderer({ canvas, antialias: this.preset.antialias, powerPreference: 'high-performance' })
+    const coarsePointer = matchMedia('(pointer: coarse)').matches
+    this.gl = new THREE.WebGLRenderer({ canvas, antialias: this.preset.antialias && !coarsePointer, powerPreference: coarsePointer ? 'low-power' : 'high-performance' })
     this.gl.outputColorSpace = THREE.SRGBColorSpace
+    canvas.addEventListener('webglcontextlost', event => {
+      event.preventDefault()
+      window.dispatchEvent(new CustomEvent('rally:webgl-lost'))
+    })
+    canvas.addEventListener('webglcontextrestored', () => {
+      this.applyQuality(quality)
+      window.dispatchEvent(new CustomEvent('rally:webgl-restored'))
+    })
     this.gl.toneMapping = THREE.ACESFilmicToneMapping
     this.gl.toneMappingExposure = 1
     this.gl.shadowMap.type = THREE.PCFSoftShadowMap
