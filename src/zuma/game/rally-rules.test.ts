@@ -5,6 +5,7 @@ import { buildPaceNotes, gradeFor, turnAngle } from './pace-notes'
 import { lookFor, parseGarage } from './customization'
 import { parseSave } from '../engine/save'
 import { advanceLateralMotion } from './handling'
+import { buildStageRoutePoints } from './rally-track'
 
 describe('stage variety', () => {
   it('consecutive stages never share a biome', () => {
@@ -96,5 +97,21 @@ describe('rally lateral handling', () => {
     expect(advanceLateralMotion({ ...base, dt: 0, lateralVelocity: 3 })).toBe(3)
     expect(advanceLateralMotion({ ...base, dt: -1, lateralVelocity: 3 })).toBe(3)
     expect(advanceLateralMotion({ ...base, lateralVelocity: 30 })).toBeLessThanOrEqual(12)
+  })
+})
+
+describe('procedural rally routes', () => {
+  it('builds deterministic, finite closed-course control points', () => {
+    const first = buildStageRoutePoints(12)
+    const repeated = buildStageRoutePoints(12)
+    expect(first).toHaveLength(56)
+    expect(first.map(p => p.toArray())).toEqual(repeated.map(p => p.toArray()))
+    expect(first.every(p => Number.isFinite(p.x) && Number.isFinite(p.z))).toBe(true)
+  })
+
+  it('changes course geometry between stages', () => {
+    const first = buildStageRoutePoints(12)
+    const next = buildStageRoutePoints(13)
+    expect(first.map(p => p.toArray())).not.toEqual(next.map(p => p.toArray()))
   })
 })
