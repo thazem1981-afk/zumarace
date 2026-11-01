@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { BIOME_ORDER, biomeForStage, conditionsForStage, gripForConditions, SURFACE_GRIP, WEATHER_GRIP, windForWeather } from './environment'
 import { CAMPAIGN_CARS, CAMPAIGN_STAGES } from './campaign'
-import { buildPaceNotes, gradeFor, turnAngle } from './pace-notes'
+import { buildPaceNotes, gradeFor, paceNotePhase, turnAngle } from './pace-notes'
 import { lookFor, parseGarage } from './customization'
 import { parseSave } from '../engine/save'
-import { advanceLateralMotion } from './handling'
+import { advanceLateralMotion, passingLane } from './handling'
 import { shapeAnalogStick, smoothControl } from '../engine/input'
 import { buildStageRoutePoints } from './rally-track'
 import * as THREE from 'three'
@@ -207,5 +207,26 @@ describe('surface-aware rally grip', () => {
 
   it('keeps clear-weather grip stable at zero weather intensity', () => {
     expect(gripForConditions('gravel', 'rain', 0)).toBe(SURFACE_GRIP.gravel)
+  })
+})
+
+
+describe('rally racecraft helpers', () => {
+  it('chooses a clear lane away from nearby traffic', () => {
+    const target = passingLane(-1, 1, 4)
+    expect(Math.abs(target - 1)).toBeGreaterThan(2.2)
+    expect(target).toBeGreaterThanOrEqual(-4)
+    expect(target).toBeLessThanOrEqual(4)
+  })
+
+  it('keeps passing targets within the road edge', () => {
+    expect(Math.abs(passingLane(0, 3.8, 4))).toBeLessThanOrEqual(4)
+  })
+
+  it('stages co-driver calls before the braking point', () => {
+    expect(paceNotePhase(160)).toBe('prepare')
+    expect(paceNotePhase(90)).toBe('call')
+    expect(paceNotePhase(30)).toBeNull()
+    expect(paceNotePhase(Number.NaN)).toBeNull()
   })
 })
