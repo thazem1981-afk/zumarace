@@ -1,20 +1,23 @@
-# Zumarace
+# Zuma Rally — زوما رالي
 
-سأقوم بإجراء بعض التعديلات والإضافات غير أسماء العربيات لأسماء منطقيه وأضف شخصيات واريد توسيع مضمار السباق وتحسين شاشه البدايه والا تكون كل الأدوار متشابه و أضف تأثيرات واقعيه وجعل السيارات أكثر واقعيه وأضف ألا تكون كل الأدوار في الصحراء وقم بتنفيذ الاقتراحات: 1- نظام الطقس والوقت الديناميكي، 2- كاميرات متنوعة قابلة للتبديل، 3- إشارات المساعد الملاحي للرالي Co-Driver، 4- تخصيص مظهر السيارات في الجراج.
+لعبة سباقات رالي ثلاثية الأبعاد بالعربية، تُبنى بـ Three.js داخل TanStack Start، وتعمل أيضاً كتطبيق أندرويد (WebView) من نفس الكود.
 
-This project was built with [Lovable](https://lovable.dev).
+**النسخة الحية**: https://zumarace.lovable.app
 
-**Live app**: https://zumarace.lovable.app
+## المميزات
 
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/659ea5e8-8810-4f54-9ca8-865326ac9c97).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+- **100 مرحلة** حملة بتدرّج صعوبة ومكافآت عملات.
+- **7 بيئات سباق**: صحراء، غابة، وادٍ صخري، ثلوج، ساحل، جبال، و**مدينة ليلية** (أسفلت بأرصفة نيون، مراحلها تُقام ليلاً أو عند الغروب، مع أبراج بنوافذ مضيئة وأعمدة إنارة متوهجة).
+- **10 سيارات** بأسماء وقدرات مميزة — أحدثها **كوبيه كهربائية GT-E** بقدرة «شحن كبحي متجدد» (شحن تيربو أسرع وتسارع كهربائي فوري).
+- **طقس ووقت ديناميكي**: مطر وضباب وثلوج وعواصف رملية وبرق، وسماء تتحرك من الفجر إلى النجوم، وطرق مبللة تنعكس عليها الإضاءة.
+- **ملّاح (Co-Driver)** يقرأ المنعطفات بصوت و إشارات، وكاميرات متعددة قابلة للتبديل.
+- **واقعية بصرية**: انعكاسات إضاءة بيئية (IBL) على طلاء السيارات اللامع والزجاج والمعدن، كشافات ليلية حقيقية، ظلال ناعمة، ونغمات سينمائية (ACES).
+- **جراج كامل**: شراء سيارات وترقيات محرك وإطارات ووحدات تيربو وتخصيص الطلاء والجنوط والكسوة، وسائقون قابلين للاختيار.
+- شاشة بداية تعرض إحصائيات الحملة والمرحلة القادمة وظروفها وطاقمك وسيارتك.
 
 ## Development
+
+This project was built with [Lovable](https://lovable.dev). Continue developing it in the [Lovable editor](https://lovable.dev/projects/659ea5e8-8810-4f54-9ca8-865326ac9c97) — pushes to `main` on GitHub sync back into Lovable.
 
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
@@ -23,4 +26,5 @@ git clone <this-repository-url>
 cd <repository-name>
 npm i
 npm run dev
+npm test        # vitest — game rules in src/zuma/game/rally-rules.test.ts
 ```
