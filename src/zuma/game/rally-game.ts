@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import type { Audio } from '../engine/audio'
 import type { Input } from '../engine/input'
 import type { Renderer } from '../engine/renderer'
@@ -159,6 +160,13 @@ export class RallyGame {
     this.camera.far = 3200
     this.camera.updateProjectionMatrix()
     this.atmosphere = new Atmosphere(this.scene, renderer.shadowMapSize)
+    // Image-based lighting: a neutral room environment baked through PMREM gives the
+    // clearcoat paint, glass and polished metal something real to reflect. Its strength
+    // follows the time of day in updateLights, so nights stay dark.
+    const pmrem = new THREE.PMREMGenerator(renderer.gl)
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    this.scene.environmentIntensity = 0.42
+    pmrem.dispose()
     this.scene.add(this.particles.points, this.skids.mesh)
     this.headlight.position.set(0, 1.1, 2.2)
     this.headlight.target.position.set(0, 0, 22)
@@ -688,6 +696,8 @@ export class RallyGame {
     const dark = this.atmosphere.darkness
     const gloom = this.conditions.weather === 'clear' ? 0 : 0.35
     const lightsOn = Math.max(dark, gloom * 0.6)
+    // Reflections fade with the light: full by day, a dim sheen at night.
+    this.scene.environmentIntensity = 0.42 - lightsOn * 0.3
     this.headlight.intensity = lightsOn * 260
     this.headlight.visible = lightsOn > 0.02
     const apply = (body: THREE.Group, brake: boolean) => {

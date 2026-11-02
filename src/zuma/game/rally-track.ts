@@ -157,6 +157,46 @@ export class RallyTrack {
     return tex
   }
 
+  /**
+   * Procedural tower facade for the night city: a colour map of dark concrete and window
+   * glass, plus a matching emissive map where only the lit windows glow after dark.
+   */
+  private buildingTextures(): { map: THREE.CanvasTexture; emissiveMap: THREE.CanvasTexture } {
+    const width = 128
+    const height = 256
+    const face = document.createElement('canvas')
+    face.width = width; face.height = height
+    const glow = document.createElement('canvas')
+    glow.width = width; glow.height = height
+    const fctx = face.getContext('2d')!
+    const gctx = glow.getContext('2d')!
+    fctx.fillStyle = '#191c22'; fctx.fillRect(0, 0, width, height)
+    gctx.fillStyle = '#000000'; gctx.fillRect(0, 0, width, height)
+    let seed = stageSeed(this.stageNumber) ^ 0x51ab
+    const rnd = () => { seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0; return seed / 0x1_0000_0000 }
+    for (let row = 0; row < 16; row += 1) {
+      for (let col = 0; col < 6; col += 1) {
+        const x = 8 + col * 20
+        const y = 10 + row * 15
+        const lit = rnd()
+        fctx.fillStyle = lit > 0.55 ? '#3d3a30' : '#232833'
+        fctx.fillRect(x, y, 11, 8)
+        if (lit > 0.55) {
+          gctx.fillStyle = lit > 0.86 ? '#a5f3ec' : '#ffd9a0'
+          gctx.fillRect(x, y, 11, 8)
+        }
+      }
+    }
+    const make = (canvas: HTMLCanvasElement) => {
+      const tex = new THREE.CanvasTexture(canvas)
+      tex.colorSpace = THREE.SRGBColorSpace
+      tex.anisotropy = 4
+      this.resources.add(tex)
+      return tex
+    }
+    return { map: make(face), emissiveMap: make(glow) }
+  }
+
   private buildGround(): void {
     const b = this.biome
     const tex = this.noiseTexture(b.ground, b.groundAlt, 90, 1)
@@ -416,6 +456,13 @@ export class RallyTrack {
     const rockGeo = this.geo(new THREE.DodecahedronGeometry(1.15, 0))
     const cactusGeo = this.geo(new THREE.CylinderGeometry(0.28, 0.42, 3.4, 7))
     const armGeo = this.geo(new THREE.CylinderGeometry(0.18, 0.22, 1.4, 7))
+    const city = b.id === 'city' ? this.buildingTextures() : undefined
+    const buildingMat = city ? this.material(0xffffff, 0.85, { map: city.map, emissiveMap: city.emissiveMap, emissive: 0xffffff, emissiveIntensity: 1 }) : undefined
+    const poleMat = this.material(0x2b2f36, 0.6, { metalness: 0.4 })
+    const lampGlowMat = this.material(0xfff3cf, 0.4, { emissive: 0xffdf9e, emissiveIntensity: 2.2 })
+    const buildingGeo = this.geo(new THREE.BoxGeometry(7, 15, 7))
+    const poleGeo = this.geo(new THREE.CylinderGeometry(0.09, 0.13, 5.4, 6))
+    const lampHeadGeo = this.geo(new THREE.BoxGeometry(0.55, 0.18, 0.95))
     for (let i = 0; i < count; i += 1) {
       const r1 = seeded(seed + i * 13)
       const d = (i / count) * this.length + seeded(seed + i) * 6
@@ -431,7 +478,17 @@ export class RallyTrack {
       const add = (g: THREE.BufferGeometry, m: THREE.Material, y: number, sx = 1, sy = 1, sz = 1) => {
         const mesh = new THREE.Mesh(g, m); mesh.position.y = y; mesh.scale.set(sx, sy, sz); mesh.castShadow = true; mesh.receiveShadow = true; prop.add(mesh); return mesh
       }
-      if (roll < 0.25) {
+      if (b.id === 'city') {
+        if (roll < 0.3) {
+          // Street lamp: dark pole with a warm glowing head.
+          add(poleGeo, poleMat, 2.7)
+          add(lampHeadGeo, lampGlowMat, 5.4)
+        } else {
+          // Tower block with lit windows; taller further into the roll range.
+          const sy = 0.7 + roll * 1.6
+          add(buildingGeo, buildingMat!, 7.5 * sy, 0.8 + roll * 0.7, sy, 0.8 + (1 - roll) * 0.6)
+        }
+      } else if (roll < 0.25) {
         add(rockGeo, rockMat, 0.6, 1.4, 0.8 + roll, 1.1)
         if (b.id === 'snow') add(rockGeo, snowMat, 1.05, 1.1, 0.3, 0.9)
       } else if (b.id === 'desert') {
