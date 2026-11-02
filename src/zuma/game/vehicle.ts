@@ -55,33 +55,62 @@ function extrudeProfile(points: [number, number][], width: number, bevel: number
 
 function liveryTexture(base: string, look: CarLook): THREE.CanvasTexture {
   const c = document.createElement('canvas')
-  c.width = 512; c.height = 256
+  c.width = 1024; c.height = 512
   const ctx = c.getContext('2d')!
   ctx.fillStyle = base
-  ctx.fillRect(0, 0, 512, 256)
+  ctx.fillRect(0, 0, 1024, 512)
+  // Paint shading: a soft highlight along the shoulder line and shadow pooling at the
+  // rocker, so the flat extruded flank reads as pressed sheet metal rather than a slab.
+  const shade = ctx.createLinearGradient(0, 0, 0, 512)
+  shade.addColorStop(0, 'rgba(255,255,255,0.13)')
+  shade.addColorStop(0.45, 'rgba(255,255,255,0)')
+  shade.addColorStop(0.82, 'rgba(0,0,0,0.10)')
+  shade.addColorStop(1, 'rgba(0,0,0,0.28)')
+  ctx.fillStyle = shade
+  ctx.fillRect(0, 0, 1024, 512)
   const accent = new THREE.Color(base).getHSL({ h: 0, s: 0, l: 0 }).l > 0.6 ? '#1c1d20' : '#f2f2ee'
   if (look.livery === 'stripes' || look.livery === 'rally') {
     ctx.fillStyle = accent
-    ctx.fillRect(0, 96, 512, 22); ctx.fillRect(0, 138, 512, 22)
+    ctx.fillRect(0, 192, 1024, 44); ctx.fillRect(0, 276, 1024, 44)
   }
   if (look.livery === 'split') {
     ctx.fillStyle = accent
-    ctx.beginPath(); ctx.moveTo(0, 256); ctx.lineTo(512, 120); ctx.lineTo(512, 256); ctx.fill()
+    ctx.beginPath(); ctx.moveTo(0, 512); ctx.lineTo(1024, 240); ctx.lineTo(1024, 512); ctx.fill()
   }
   if (look.livery === 'rally') {
     ctx.fillStyle = '#e5822f'
-    ctx.beginPath(); ctx.moveTo(300, 256); ctx.lineTo(512, 40); ctx.lineTo(512, 256); ctx.fill()
+    ctx.beginPath(); ctx.moveTo(600, 512); ctx.lineTo(1024, 80); ctx.lineTo(1024, 512); ctx.fill()
   }
   if (look.livery === 'number' || look.livery === 'rally') {
     ctx.fillStyle = '#f2f2ee'
-    ctx.beginPath(); ctx.arc(256, 150, 58, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(512, 300, 116, 0, Math.PI * 2); ctx.fill()
     ctx.fillStyle = '#111'
-    ctx.font = 'bold 78px Arial'
+    ctx.font = 'bold 156px Arial'
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-    ctx.fillText(String(look.number), 256, 154)
+    ctx.fillText(String(look.number), 512, 308)
   }
+  // Panel work drawn over the paint: door shut lines, handles, a waist crease and the
+  // fuel filler — the small seams that make a real car side read as assembled panels.
+  ctx.strokeStyle = 'rgba(0,0,0,0.30)'
+  ctx.lineWidth = 3
+  for (const x of [330, 560, 760]) {
+    ctx.beginPath(); ctx.moveTo(x, 150); ctx.lineTo(x, 470); ctx.stroke()
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)'
+  ctx.beginPath(); ctx.moveTo(40, 205); ctx.lineTo(984, 205); ctx.stroke()
+  ctx.strokeStyle = 'rgba(255,255,255,0.20)'
+  ctx.lineWidth = 2
+  ctx.beginPath(); ctx.moveTo(40, 212); ctx.lineTo(984, 212); ctx.stroke()
+  ctx.fillStyle = 'rgba(0,0,0,0.38)'
+  for (const x of [352, 582]) {
+    ctx.beginPath(); ctx.roundRect(x, 292, 74, 15, 7); ctx.fill()
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)'
+  ctx.lineWidth = 3
+  ctx.beginPath(); ctx.arc(150, 300, 34, 0, Math.PI * 2); ctx.stroke()
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
+  tex.anisotropy = 8
   return tex
 }
 
@@ -96,7 +125,7 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   const tex = liveryTexture(paintColor, look)
   const paint = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: tex, roughness: 0.32, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.12 })
   const trim = new THREE.MeshStandardMaterial({ color: 0x1d1f23, roughness: 0.7, metalness: 0.15 })
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0x0e1a24, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.82, clearcoat: 1 })
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0x0b141d, roughness: 0.04, metalness: 0.15, transparent: true, opacity: 0.9, clearcoat: 1 })
   const tire = new THREE.MeshStandardMaterial({ color: 0x141517, roughness: 0.96 })
   const rim = new THREE.MeshStandardMaterial({ color: look.rim, roughness: 0.28, metalness: 0.85 })
   const lamp = new THREE.MeshStandardMaterial({ color: 0xfff6d8, emissive: 0xffe2a0, emissiveIntensity: 0.6, roughness: 0.2 })
@@ -197,10 +226,20 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   box([p.width * 1.02, 0.22, 0.2], [0, lift + 0.5, -L - 0.02], trim, 'rear-bumper')
   box([p.width * 0.4, 0.16, 0.04], [0, lift + 0.7, L + 0.1], trim, 'grille')
   box([0.5, 0.12, 0.02], [0, lift + 0.62, -L - 0.13], new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.5 }), 'plate')
+  box([0.5, 0.12, 0.02], [0, lift + 0.6, L + 0.13], new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.5 }), 'front-plate')
+  // Shark-fin antenna on the rear roof, where the glasshouse gives a clean roof line.
+  if (p.glass.length && !p.cage) {
+    const roofY = Math.max(...p.glass.map(([, y]) => y)) + lift
+    box([0.045, 0.15, 0.24], [0, roofY + 0.06, -0.55], trim, 'shark-fin-antenna')
+  }
   for (const x of [-1, 1]) {
     box([0.36, 0.13, 0.06], [x * W * 0.62, lift + 0.82, L + 0.06], lamp, 'headlight')
     box([0.3, 0.13, 0.06], [x * W * 0.66, lift + 0.85, -L - 0.06], tail, 'taillight')
     box([0.08, 0.12, 0.2], [x * (W + 0.08), lift + 1.18, 0.75], trim, 'mirror')
+    // Flush door handles and a small amber side repeater on each flank.
+    box([0.035, 0.05, 0.24], [x * (W + 0.005), lift + 1.02, 0.18], trim, 'door-handle')
+    box([0.035, 0.05, 0.24], [x * (W + 0.005), lift + 1.02, -0.62], trim, 'door-handle')
+    box([0.03, 0.055, 0.13], [x * (W + 0.008), lift + 0.92, L * 0.55], lamp, 'side-repeater')
     box([0.3, 0.32, 0.03], [x * W * 0.82, p.wheel * 0.75, -L * 0.62 - p.wheel - 0.08], trim, 'mudflap')
     // Rally spot lights on the bonnet for the full rally livery.
     if (look.livery === 'rally' && !p.cage) box([0.2, 0.2, 0.08], [x * 0.3, lift + 1.04, L - 0.35], lamp, 'spot')
@@ -248,6 +287,9 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
   const wheelAxles: THREE.Group[] = []
   const tireGeo = new THREE.CylinderGeometry(r, r, 0.32, 24)
   tireGeo.rotateZ(Math.PI / 2)
+  const sidewallGeo = new THREE.TorusGeometry(r * 0.78, 0.022, 8, 28)
+  sidewallGeo.rotateY(Math.PI / 2)
+  const sidewallMat = new THREE.MeshStandardMaterial({ color: 0x1e2023, roughness: 0.9 })
   const treadGeo = new THREE.BoxGeometry(0.34, 0.05, 0.12)
   const rimGeo = new THREE.CylinderGeometry(r * 0.62, r * 0.62, 0.34, 20)
   rimGeo.rotateZ(Math.PI / 2)
@@ -268,6 +310,11 @@ export function buildRealisticCar(car: CampaignCar, look: CarLook): THREE.Group 
     spin.name = `wheel-${z > 0 ? 'front' : 'rear'}-${x}`
     const t = new THREE.Mesh(tireGeo, tire); t.castShadow = true
     spin.add(t)
+    // Raised sidewall ring and lettering band break up the plain tyre cylinder.
+    const sidewall = new THREE.Mesh(sidewallGeo, sidewallMat)
+    sidewall.position.x = x * 0.165
+    sidewall.name = 'tyre-sidewall'
+    spin.add(sidewall)
     const treadInstances = new THREE.InstancedMesh(treadGeo, tire, 14)
     const wheelPart = new THREE.Object3D()
     for (let k = 0; k < 14; k += 1) {
