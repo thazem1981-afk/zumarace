@@ -19,6 +19,10 @@ body, #ui { color: #fff6e8 }
 .next-stage strong { display: block; font-size: 22px; margin: 4px 0 10px }
 .cond-chips { display: flex; flex-wrap: wrap; gap: 6px }
 .cond-chips span { padding: 4px 10px; border-radius: 99px; background: rgba(243, 166, 71, 0.16); border: 1px solid rgba(243, 166, 71, 0.35); font-size: 12px; color: #ffe2a5 }
+.title-highlights { display: flex; flex-wrap: wrap; gap: 6px; margin: -8px 0 16px }
+.title-highlights span { padding: 5px 11px; border-radius: 99px; background: rgba(24, 25, 26, 0.48); border: 1px solid rgba(255, 239, 210, 0.17); font-size: 12px; color: #e8dfca }
+.title-highlights span.is-new { background: rgba(55, 224, 212, 0.14); border-color: rgba(55, 224, 212, 0.45); color: #a5f3ec; font-weight: 700 }
+.menu-icon { margin-inline-end: 8px }
 .crew { display: flex; flex-direction: column; gap: 10px }
 .crew-person { display: flex; align-items: center; gap: 12px }
 .crew-person img { width: 52px; height: 52px; border-radius: 14px; object-fit: cover; border: 2px solid rgba(243, 166, 71, 0.5) }

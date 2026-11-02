@@ -71,6 +71,8 @@
   "carAbility.turbo.desc": "يزيد قوة دفعة التيربو المجهّز.",
   "carAbility.terrain.name": "دفع رباعي",
   "carAbility.terrain.desc": "تماسك أفضل وفقدان سرعة أقل خارج خط الحلبة.",
+  "carAbility.regen.name": "شحن كبحي متجدد",
+  "carAbility.regen.desc": "تستعيد شحن التيربو أسرع، مع تسارع كهربائي فوري.",
   "shop.tip": "اربح السباقات واجمع Zuma Coin لشراء سيارات وترقيات أقوى.",
   "turbo.balanced.name": "متوازن",
   "turbo.balanced.desc": "دفعة معتدلة لشحنة متوازنة.",

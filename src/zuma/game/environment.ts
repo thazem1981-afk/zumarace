@@ -3,7 +3,7 @@
  * weather changes grip. No three.js here so the rules can be unit tested.
  */
 
-export type BiomeId = 'desert' | 'forest' | 'snow' | 'canyon' | 'coast' | 'mountain'
+export type BiomeId = 'desert' | 'forest' | 'snow' | 'canyon' | 'coast' | 'mountain' | 'city'
 export type WeatherId = 'clear' | 'cloudy' | 'rain' | 'fog' | 'snow' | 'sandstorm'
 export type TimeOfDayId = 'dawn' | 'day' | 'sunset' | 'night'
 export type SurfaceId = 'sand' | 'gravel' | 'mud' | 'snow' | 'tarmac'
@@ -30,10 +30,11 @@ export const BIOMES: Readonly<Record<BiomeId, Biome>> = Object.freeze({
   canyon: { id: 'canyon', label: 'وادٍ صخري', surface: 'gravel', ground: 0xb5653d, groundAlt: 0x8f4a2c, road: 0x9a6a4c, curbA: 0xf0d9b0, curbB: 0x2f5b66, foliage: 0x6b7a3a, rock: 0x9b4f30, dust: 0xc58a62, weathers: ['clear', 'sandstorm', 'cloudy', 'clear'] },
   coast: { id: 'coast', label: 'ساحل', surface: 'tarmac', ground: 0xe6d3a3, groundAlt: 0x8fae6a, road: 0x45474b, curbA: 0xf5f5f0, curbB: 0xd13f3f, foliage: 0x3f7a3a, rock: 0x8d8478, dust: 0xe6d8b5, weathers: ['clear', 'cloudy', 'rain', 'clear'] },
   mountain: { id: 'mountain', label: 'جبال', surface: 'gravel', ground: 0x7d8a6a, groundAlt: 0x6a6f66, road: 0x8b8378, curbA: 0xf2efe6, curbB: 0x2e6b46, foliage: 0x2f4f33, rock: 0x6f6a66, dust: 0xa59c8e, weathers: ['clear', 'fog', 'rain', 'cloudy'] },
+  city: { id: 'city', label: 'مدينة ليلية', surface: 'tarmac', ground: 0x2e3138, groundAlt: 0x23262c, road: 0x33363c, curbA: 0x37e0d4, curbB: 0xff3d7f, foliage: 0x2c4a3e, rock: 0x565d66, dust: 0x8b93a0, weathers: ['clear', 'clear', 'rain', 'fog', 'cloudy'] },
 })
 
 /** Stage order cycles biomes so consecutive stages never share a landscape. */
-export const BIOME_ORDER: readonly BiomeId[] = ['desert', 'forest', 'canyon', 'snow', 'coast', 'mountain']
+export const BIOME_ORDER: readonly BiomeId[] = ['desert', 'forest', 'canyon', 'snow', 'coast', 'mountain', 'city']
 const TIMES: readonly TimeOfDayId[] = ['day', 'sunset', 'dawn', 'day', 'night', 'day', 'sunset']
 
 export function biomeForStage(stage: number): Biome {
@@ -50,6 +51,8 @@ export function conditionsForStage(stage: number): StageConditions {
   // The first stage is always clear daylight so a new player learns in easy conditions.
   if (s === 1) return { biome, weather: 'clear', time: 'day' }
   const weather = biome.weathers[seed % biome.weathers.length]
+  // City stages are night races: they run after dark, at sunset or full night.
+  if (biome.id === 'city') return { biome, weather, time: seed % 2 === 0 ? 'night' : 'sunset' }
   const time = TIMES[(seed >>> 7) % TIMES.length]
   return { biome, weather, time }
 }

@@ -6,7 +6,7 @@ import { CAMPAIGN_CARS, CAMPAIGN_STAGES, MAX_UPGRADE_LEVEL, TURBO_TYPES, UPGRADE
 import type { RallyHud, RallyResult } from '../game/rally-game'
 import { DRIVERS, driverById, type DriverId } from '../game/characters'
 import { LIVERIES, lookFor, PAINT_COLORS, RIM_COLORS, type CarLook, type LiveryId } from '../game/customization'
-import { conditionsForStage, TIME_LABEL, WEATHER_LABEL } from '../game/environment'
+import { BIOME_ORDER, conditionsForStage, TIME_LABEL, WEATHER_LABEL } from '../game/environment'
 import salemImg from '../../assets/driver-salem.jpg'
 import laylaImg from '../../assets/driver-layla.jpg'
 import karimImg from '../../assets/driver-karim.jpg'
@@ -116,6 +116,8 @@ export class RallyUi {
     const next = this.root.querySelector<HTMLElement>('[data-slot="home-next"]')!
     next.innerHTML = `<small>المرحلة القادمة · ${number(stage.number)}</small><strong>${escapeHtml(stage.name)}</strong>
       <div class="cond-chips"><span>${escapeHtml(c.biome.label)}</span><span>${WEATHER_ICON[c.weather]} ${escapeHtml(WEATHER_LABEL[c.weather])}</span><span>${escapeHtml(TIME_LABEL[c.time])}</span></div>`
+    const highlights = this.root.querySelector<HTMLElement>('[data-slot="home-highlights"]')!
+    highlights.innerHTML = `<span>🏁 ${number(CAMPAIGN_STAGES.length)} مرحلة</span><span>🌍 ${number(BIOME_ORDER.length)} بيئات</span><span>🏎 ${number(CAMPAIGN_CARS.length)} سيارات</span><span class="is-new">🌃 جديد: المدينة الليلية</span>`
     const crew = this.root.querySelector<HTMLElement>('[data-slot="home-crew"]')!
     crew.innerHTML = `<div class="crew-person"><img src="${PORTRAITS[driver.id]}" alt="" width="64" height="64"><div><small>السائق</small><b>${escapeHtml(driver.name)}</b><em>${escapeHtml(driver.perk)}</em></div></div>
       <div class="crew-car"><small>السيارة</small><b>${escapeHtml(car.name)}</b></div>`
@@ -472,8 +474,8 @@ export class RallyUi {
 <section class="screen screen-title" data-screen="title">
   <header class="screen-top"><div class="wordmark"><img class="brand-emblem" src="/favicon.png" alt=""><div><strong data-i18n="game.title"></strong><small data-i18n="brand.type"></small></div></div><div class="wallet"><span aria-hidden="true">Z</span><b data-slot="home-coins">0</b><small data-i18n="money.coins"></small></div></header>
   <div class="title-layout">
-    <div class="title-copy"><div class="title-ribbon"><i></i><span data-i18n="race.cup"></span><b>100</b></div><p class="eyebrow" data-i18n="brand.eyebrow"></p><h1 class="title-logo"><span>ZUMA</span><em>RALLY</em></h1><p class="tagline" data-i18n="game.tagline"></p><div class="campaign-summary"><span><span data-i18n="menu.stage"></span> <b data-slot="home-stage">1</b> / 100</span><span><span data-i18n="menu.wins"></span> <b data-slot="home-wins">0</b></span></div>
-      <nav class="menu"><button data-nav class="btn btn-primary" data-action="race"><span data-i18n="menu.race"></span><b>↙</b></button><button data-nav class="btn" data-action="campaign"><span data-i18n="menu.campaign"></span></button><button data-nav class="btn btn-accent" data-action="garage"><span data-i18n="menu.garage"></span></button><button data-nav class="btn btn-quiet" data-action="settings"><span data-i18n="menu.settings"></span></button></nav>
+    <div class="title-copy"><div class="title-ribbon"><i></i><span data-i18n="race.cup"></span><b>100</b></div><p class="eyebrow" data-i18n="brand.eyebrow"></p><h1 class="title-logo"><span>ZUMA</span><em>RALLY</em></h1><p class="tagline" data-i18n="game.tagline"></p><div class="campaign-summary"><span><span data-i18n="menu.stage"></span> <b data-slot="home-stage">1</b> / 100</span><span><span data-i18n="menu.wins"></span> <b data-slot="home-wins">0</b></span></div><div class="title-highlights" data-slot="home-highlights"></div>
+      <nav class="menu"><button data-nav class="btn btn-primary" data-action="race"><span class="menu-icon" aria-hidden="true">🏁</span><span data-i18n="menu.race"></span><b>↙</b></button><button data-nav class="btn" data-action="campaign"><span class="menu-icon" aria-hidden="true">🗺️</span><span data-i18n="menu.campaign"></span></button><button data-nav class="btn btn-accent" data-action="garage"><span class="menu-icon" aria-hidden="true">🔧</span><span data-i18n="menu.garage"></span></button><button data-nav class="btn btn-quiet" data-action="settings"><span class="menu-icon" aria-hidden="true">⚙️</span><span data-i18n="menu.settings"></span></button></nav>
     </div>
     <aside class="title-side"><div class="next-stage" data-slot="home-next"></div><div class="crew" data-slot="home-crew"></div></aside>
   </div>

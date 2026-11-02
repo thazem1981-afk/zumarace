@@ -21,6 +21,7 @@ const BIOME_STAGE_NAMES: Readonly<Record<BiomeId, readonly string[]>> = {
   snow: ['قمة الجليد', 'ممر الصقيع', 'بحيرة متجمدة', 'غابة الثلج', 'منحدر الشتاء', 'وادي البرد', 'جسر الجليد', 'هضبة البياض', 'درب الزلاجات', 'كوخ الحطّاب', 'سهل الثلوج', 'نهر متجمد', 'قمة العاصفة', 'منعطف الانهيار', 'قرية الشمال', 'ممر الشفق القطبي', 'عرش الجليد'],
   coast: ['كورنيش الموج', 'رأس المنارة', 'خليج اللؤلؤ', 'طريق النخيل الساحلي', 'ميناء الصيادين', 'جرف البحر', 'شاطئ المرجان', 'جسر الخليج', 'لسان الرمل', 'قرية المرفأ', 'منحدر النوارس', 'طريق الملاحات', 'شاطئ الغروب', 'رصيف السفن', 'خليج العواصف', 'جزيرة الصخور', 'تاج الساحل'],
   mountain: ['ممر الجبل', 'منعطفات الدبوس', 'قمة السحاب', 'هضبة الرعاة', 'وادي الشلالات', 'طريق القلعة', 'منحدر الحصى', 'سفح الصنوبر', 'جسر المضيق', 'قرية الجبل', 'حافة الهاوية', 'ممر النسور', 'درب المنجم', 'سرج الجبل', 'هضبة الضباب', 'قمة الريح', 'سقف العالم'],
+  city: ['أبراج النيون', 'نفق الأضواء', 'جسر المدينة', 'حي الأعمال', 'دوّار منتصف الليل', 'محطة القطار', 'شارع المسرح', 'برج الساعة', 'الحي القديم', 'ميدان الجامعة', 'طريق المطار', 'سوق الليل', 'ناطحات السحاب', 'جسر المشاة', 'حي الفنون', 'محور المدينة', 'عرش النيون'],
 }
 
 const STAGE_NAMES = Array.from({ length: 100 }, (_, index) => {
@@ -49,7 +50,7 @@ export function stageByNumber(number: number): CampaignStage | undefined {
   return CAMPAIGN_STAGES[number - 1]
 }
 
-export type CarId = 'dune-runner' | 'sand-hawk' | 'mirage-gt' | 'desert-king' | 'zuma-rs' | 'dune-pickup' | 'storm-buggy' | 'falcon-rally' | 'atlas-suv'
+export type CarId = 'dune-runner' | 'sand-hawk' | 'mirage-gt' | 'desert-king' | 'zuma-rs' | 'dune-pickup' | 'storm-buggy' | 'falcon-rally' | 'atlas-suv' | 'neon-gt'
 export type CarDesign = 'glb' | 'rally-hatch' | 'coupe' | '4x4' | 'sedan' | 'pickup' | 'buggy' | 'rally-truck' | 'suv'
 export type CampaignCar = Readonly<{
   id: CarId
@@ -64,7 +65,7 @@ export type CampaignCar = Readonly<{
   ability: CarAbilityId
 }>
 
-export type CarAbilityId = 'launch' | 'grip' | 'speed' | 'armor' | 'cornering' | 'recharge' | 'drift' | 'turbo' | 'terrain'
+export type CarAbilityId = 'launch' | 'grip' | 'speed' | 'armor' | 'cornering' | 'recharge' | 'drift' | 'turbo' | 'terrain' | 'regen'
 export type CarAbilityProfile = Readonly<{
   id: CarAbilityId
   acceleration: number
@@ -96,6 +97,7 @@ export const CAR_ABILITIES: Readonly<Record<CarAbilityId, CarAbilityProfile>> = 
   drift: defineAbility('drift', { drift: 1.3 }),
   turbo: defineAbility('turbo', { turboPower: 1.22 }),
   terrain: defineAbility('terrain', { offroadDrag: 0.45, grip: 1.06 }),
+  regen: defineAbility('regen', { turboRecharge: 1.3, acceleration: 1.08 }),
 })
 
 /** Store inventory: first car is free; the remaining cars cost in-game coins only. */
@@ -109,6 +111,7 @@ export const CAMPAIGN_CARS: readonly CampaignCar[] = Object.freeze([
   Object.freeze({ id: 'storm-buggy', name: 'باجي رملي 1000cc', price: 8_500, acceleration: 10, topSpeed: 9, handling: 10, grip: 9, color: '#e77a3d', design: 'buggy', ability: 'drift' }),
   Object.freeze({ id: 'falcon-rally', name: 'شاحنة رالي T5', price: 10_800, acceleration: 9, topSpeed: 11, handling: 9, grip: 10, color: '#4b8182', design: 'rally-truck', ability: 'turbo' }),
   Object.freeze({ id: 'atlas-suv', name: 'SUV رالي ريد T1+', price: 13_200, acceleration: 10, topSpeed: 11, handling: 9, grip: 10, color: '#c7a64b', design: 'suv', ability: 'terrain' }),
+  Object.freeze({ id: 'neon-gt', name: 'كوبيه كهربائية GT-E', price: 16_500, acceleration: 10, topSpeed: 11, handling: 10, grip: 9, color: '#37e0d4', design: 'coupe', ability: 'regen' }),
 ])
 
 export const TURBO_TYPES = Object.freeze([

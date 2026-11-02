@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BIOME_ORDER, biomeForStage, conditionsForStage, gripForConditions, SURFACE_GRIP, WEATHER_GRIP, windForWeather } from './environment'
-import { CAMPAIGN_CARS, CAMPAIGN_STAGES } from './campaign'
+import { CAMPAIGN_CARS, CAMPAIGN_STAGES, CAR_ABILITIES } from './campaign'
 import { buildPaceNotes, gradeFor, paceNotePhase, turnAngle } from './pace-notes'
 import { lookFor, parseGarage } from './customization'
 import { parseSave } from '../engine/save'
@@ -26,9 +26,17 @@ describe('stage variety', () => {
   it('consecutive stages never share a biome', () => {
     for (let s = 1; s < 100; s += 1) expect(biomeForStage(s).id).not.toBe(biomeForStage(s + 1).id)
   })
-  it('uses all six landscapes, not only desert', () => {
+  it('uses all seven landscapes, not only desert', () => {
     const seen = new Set(Array.from({ length: 12 }, (_, i) => biomeForStage(i + 1).id))
     expect(seen.size).toBe(BIOME_ORDER.length)
+  })
+  it('city stages are tarmac night races', () => {
+    const cityStages = Array.from({ length: 100 }, (_, i) => conditionsForStage(i + 1)).filter(c => c.biome.id === 'city')
+    expect(cityStages.length).toBeGreaterThan(0)
+    for (const c of cityStages) {
+      expect(c.biome.surface).toBe('tarmac')
+      expect(['night', 'sunset']).toContain(c.time)
+    }
   })
   it('stage 1 is clear daylight', () => {
     expect(conditionsForStage(1)).toMatchObject({ weather: 'clear', time: 'day' })
@@ -57,6 +65,10 @@ describe('car names', () => {
   it('renamed to descriptive model names', () => {
     expect(CAMPAIGN_CARS[0].name).toBe('هاتشباك رالي R2')
     expect(CAMPAIGN_CARS.find(c => c.id === 'storm-buggy')?.name).toBe('باجي رملي 1000cc')
+    const neon = CAMPAIGN_CARS.find(c => c.id === 'neon-gt')
+    expect(neon?.name).toBe('كوبيه كهربائية GT-E')
+    expect(neon?.price).toBeGreaterThan(Math.max(...CAMPAIGN_CARS.filter(c => c.id !== 'neon-gt').map(c => c.price)))
+    expect(CAR_ABILITIES.regen.turboRecharge).toBeGreaterThan(1)
   })
 })
 
