@@ -14,7 +14,7 @@ import { DEFAULT_LOOK, lookFor, type CarLook, type Garage } from './customizatio
 import { driverById, RIVAL_DRIVERS, type Driver, type DriverId } from './characters'
 import { ParticlePool, SkidMarks } from './vfx'
 import { advanceLateralMotion, passingLane } from './handling'
-import { automaticGear, engineRpm, gearAcceleration, gearTopSpeed, shiftGear, type TransmissionMode } from './transmission'
+import { engineRpm, gearAcceleration, gearTopSpeed, shiftGear, type TransmissionMode } from './transmission'
 import { sampleReplay, type ReplayFrame } from './replay'
 import type { CameraMode } from '../engine/save'
 
@@ -131,7 +131,7 @@ export class RallyGame {
   private lastResult?: RallyResult
   private raceRunNumber = 0
   cameraMode: CameraMode = 'chase'
-  transmissionMode: TransmissionMode = 'automatic'
+  transmissionMode: TransmissionMode = 'manual'
   gear = 1
   private garage: Garage = {}
   private driver: Driver = driverById('salem')
@@ -284,7 +284,6 @@ export class RallyGame {
     this.replayPlaybackTime = this.replayFrames[0].time
     this.mode = 'replay'
     this.camera.userData.ready = false
-    this.audio.stopMusic()
     this.audio.updateEngine(0, 0, false, false)
     return true
   }
@@ -358,7 +357,7 @@ export class RallyGame {
 
   setTransmission(mode: TransmissionMode): void {
     this.transmissionMode = mode
-    if (mode === 'automatic') this.gear = automaticGear(this.speed)
+    this.transmissionMode = 'manual'
   }
 
   /** Show a stage's landscape and conditions behind the title screen. */
@@ -418,7 +417,6 @@ export class RallyGame {
         this.mode = 'playing'
         this.startSignalTime = 0.75
         this.audio.play('start')
-        this.audio.startMusic()
       }
       return
     }
@@ -442,11 +440,8 @@ export class RallyGame {
     const ability = CAR_ABILITIES[this.car.ability]
     const engineScale = (0.82 + this.car.acceleration * 0.035 + this.progress.engineUpgrade * 0.035) * ability.acceleration * this.driver.acceleration
     const speedScale = (0.82 + this.car.topSpeed * 0.036 + this.progress.engineUpgrade * 0.035) * ability.topSpeed
-    if (this.transmissionMode === 'automatic') this.gear = automaticGear(this.speed)
-    else {
-      if (this.input.consume('gearUp')) this.gear = shiftGear(this.gear, 1)
-      if (this.input.consume('gearDown')) this.gear = shiftGear(this.gear, -1)
-    }
+    if (this.input.consume('gearUp')) this.gear = shiftGear(this.gear, 1)
+    if (this.input.consume('gearDown')) this.gear = shiftGear(this.gear, -1)
     const maxSpeed = CONFIG.race.maxSpeed * speedScale * gearTopSpeed(this.gear)
     const acceleration = CONFIG.race.acceleration * engineScale * gearAcceleration(this.gear)
     if (this.crashTimer > 0) {
